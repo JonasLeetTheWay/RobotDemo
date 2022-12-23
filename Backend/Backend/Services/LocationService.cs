@@ -1,6 +1,6 @@
-﻿using Backend.Domain;
+﻿using Common.Domain;
 using Backend.Infrastructure;
-using Backend.Protos;
+using Common.Protos.Location;
 using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
@@ -8,19 +8,25 @@ using MongoDB.Bson;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml.Linq;
+//using Common.Protos.Robot;
+using MongoDB.Driver;
+using System.Reflection;
 
 namespace Backend.Services;
 
 public class LocationService : LocationProto.LocationProtoBase
 {
     private readonly LocationDAO locationDAO;
+    private readonly ILogger _logger;
 
-    public LocationService(LocationDAO locationDAO)
+    public LocationService(LocationDAO locationDAO, ILogger logger)
     {
         this.locationDAO = locationDAO;
+        _logger = logger;
     }
-    // inner method to avoid repetitive work
-    private LocationResponse MakeLocationResponse(string id, RepeatedField<string> robotIds, string? name, double? x, double? y)
+
+    ////////////////////////////////////// inner methods to avoid repetitive work //////////////////////////////////////
+    private LocationResponse MakeLocationResponse(string id, IEnumerable<string> robotIds, string? name, double? x, double? y)
     {
         // check if there is an existingDoc that matches id 
 
@@ -31,8 +37,8 @@ public class LocationService : LocationProto.LocationProtoBase
         {
             response.Id = id;
             response.Name = existing.Name ?? "null";
-            response.X = existing.X ?? double.NaN;
-            response.Y = existing.Y ?? double.NaN;
+            response.X = existing.X ?? double.MinValue;
+            response.Y = existing.Y ?? double.MinValue;
             if (existing.RobotIds != null)
             {
                 response.RobotIds.AddRange(existing.RobotIds);
@@ -43,47 +49,50 @@ public class LocationService : LocationProto.LocationProtoBase
         {
             response.Id = id;
             response.Name = name ?? "null";
-            response.X = x ?? double.NaN;
-            response.Y = y ?? double.NaN;
+            response.X = x ?? double.MinValue;
+            response.Y = y ?? double.MinValue;
         }
 
         response.RobotIds.AddRange(robotIds);
 
         return response;
     }
-    private static UpdateLocationObj MakeUpdateLocationObj(RepeatedField<string> robotIds, string? name = default)
+
+    private static UpdateLocationObj MakeUpdateLocationObj(IEnumerable<string> robotIds, string? name = default)
     {
         var response = new UpdateLocationObj();
         response.Name = name;
         response.RobotIds.AddRange(robotIds);
         return response;
     }
-    private static Location MakeLocation(double? x, double? y, string? name, RepeatedField<string>? robotIds = default)
+    private static Location MakeLocation(double? x, double? y, string? name, IEnumerable<string>? robotIds = default)
     {
-        if(robotIds?.Count == null || robotIds == null)
+        if(robotIds?.ToList().Count == null || robotIds == null)
         {
             return new Location
             {
                 Name = name ?? "null",
-                X = x ?? double.NaN,
-                Y = y ?? double.NaN,
+                X = x ?? double.MinValue,
+                Y = y ?? double.MinValue,
             };
         }
         return new Location
         {
             Name = name ?? "null",
-            X = x ?? double.NaN,
-            Y = y ?? double.NaN,
+            X = x ?? double.MinValue,
+            Y = y ?? double.MinValue,
             RobotIds = robotIds.ToList() // because Google.Protobuf.Collections.RepeatedField is not a RECOGNIZED LIST
         };
     }
-    private RepeatedField<string> makeFakeRobotIdsArray()
+    private IEnumerable<string> makeFakeRobotIdsArray()
     {
-        return new RepeatedField<string> { "fake1", "fake2" };
+        return new List<string> { "fake1", "fake2" };
     }
 
+    ////////////////////////////////////// inner methods to avoid repetitive work //////////////////////////////////////
+
     // Implement the AddLocation method
-    public override Task<LocationId> AddLocation(AddLocationObj request, ServerCallContext context)
+    public override Task<LocationId> AddLocation(AddLocationRequest request, ServerCallContext context)
     {
         // Validate the request
         if (request == null)
@@ -100,17 +109,17 @@ public class LocationService : LocationProto.LocationProtoBase
 
 
     // Implement the GetLocationById method
-    public override Task<LocationResponse> GetLocationById(StringValue locationId, ServerCallContext context)
+    public override Task<LocationResponse> GetLocationById(LocationId locationId, ServerCallContext context)
     {
-        Console.WriteLine("server, getlocationbyid: "+ locationId.Value);
+        Console.WriteLine("server, getlocationbyid: "+ locationId.Id);
         // Validate the request
-        if (string.IsNullOrEmpty(locationId.Value))
+        if (string.IsNullOrEmpty(locationId.Id))
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
         }
 
         // Find the location in the database
-        var location = locationDAO.FindLocations(l => l.Id == locationId.Value).SingleOrDefault(); // unique id for every object
+        var location = locationDAO.FindLocations(l => l.Id == locationId.Id).SingleOrDefault(); // unique id for every object
         if (location == null)
         {
             throw new RpcException(new Status(StatusCode.NotFound, "Location not found"));
@@ -121,18 +130,18 @@ public class LocationService : LocationProto.LocationProtoBase
         return Task.FromResult(response);
     }
     
-
+    
     // Implement the GetLocationByRobotId method
-    public override Task<LocationResponse> GetLocationByRobotId(StringValue robotId, ServerCallContext context)
+    public override Task<LocationResponse> GetLocationByRobotId(RobotId robotId, ServerCallContext context)
     {
         // Validate the request
-        if (string.IsNullOrEmpty(robotId.Value))
+        if (string.IsNullOrEmpty(robotId.Id))
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
         }
 
         // Find the location in the database
-        var location = locationDAO.FindLocations(l => l.Id == robotId.Value).SingleOrDefault();
+        var location = locationDAO.FindLocations(l => l.Id == robotId.Id).SingleOrDefault();
         if (location == null)
         {
             throw new RpcException(new Status(StatusCode.NotFound, "Location not found"));
@@ -142,12 +151,51 @@ public class LocationService : LocationProto.LocationProtoBase
 
         return Task.FromResult(response);
     }
+    // Implement the GetLocationByName method
+    public override Task<LocationResponse> GetLocationByName(Name request, ServerCallContext context)
+    {
+        // Validate the request
+        if (string.IsNullOrEmpty(request.Value))
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
+        }
+        // Find the location in the database
+        var location = locationDAO.FindLocations(l => l.Id == request.Value).SingleOrDefault();
+        if (location == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Location not found"));
+        }
+        var response = MakeLocationResponse(location.Id, makeFakeRobotIdsArray(), location.Name, location.X, location.Y);
+        
+        return Task.FromResult(response);
+
+    }
+    // Implement the GetLocationByName method
+    public override Task<LocationResponse> GetLocationByCoordinate(Coordinate request, ServerCallContext context)
+    {
+        // Validate the request
+        if (request.X == double.MinValue || request.Y == double.MinValue)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
+        }
+        // Find the location in the database
+        var coordinateFilter = Builders<Location>.Filter.Eq("x", request.X) & Builders<Location>.Filter.Eq("y", request.Y);
+        var location = locationDAO.FindLocations(coordinateFilter).SingleOrDefault();
+        if (location == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Location not found"));
+        }
+        var response = MakeLocationResponse(location.Id, makeFakeRobotIdsArray(), location.Name, location.X, location.Y);
+        
+        return Task.FromResult(response);
+
+    }
 
     // Implement the GetLocations method
     public override Task<LocationsResponse> GetLocations(Empty request, ServerCallContext context)
     {
         // Find all locations in the database
-        var locations = locationDAO.FindLocations();
+        var locations = locationDAO.GetLocations();
 
         // Return the found locations in the response
         LocationsResponse response = new LocationsResponse();
@@ -181,9 +229,10 @@ public class LocationService : LocationProto.LocationProtoBase
         var update = MakeLocation(default,default,request.Update.Name, request.Update.RobotIds);
 
         // Update the location in the database
-        locationDAO.UpdateLocation(request.Id, update);
+        var innerResult = locationDAO.UpdateLocation(request.Id, update);
+        // logging innerResult with function name 
+        _logger.LogInformation($"{MethodBase.GetCurrentMethod().Name} - {innerResult}");
 
-        // Return the updated location in the response
         return Task.FromResult(new Empty());
     }
 
@@ -197,9 +246,10 @@ public class LocationService : LocationProto.LocationProtoBase
         }
 
         // Delete the location from the database
-        locationDAO.DeleteLocation(request.Id);
-
-        // Return an empty response
+        var innerResult = locationDAO.DeleteLocation(request.Id);
+        // logging innerResult with function name 
+        _logger.LogInformation($"{MethodBase.GetCurrentMethod().Name} - {innerResult}");
+        
         return Task.FromResult(new Empty());
     }
 
@@ -216,9 +266,10 @@ public class LocationService : LocationProto.LocationProtoBase
         }
 
         // Add the robot to the location in the database
-        locationDAO.AddRobotToLocation(locationId, robotId);
+        var innerResult = locationDAO.AddRobotToLocation(locationId, robotId);
+        // logging innerResult with function name 
+        _logger.LogInformation($"{MethodBase.GetCurrentMethod().Name} - {innerResult}");
 
-        // Return an empty response
         return Task.FromResult(new Empty());
     }
 
@@ -234,9 +285,10 @@ public class LocationService : LocationProto.LocationProtoBase
         }
 
         // Remove the robot from the location in the database
-        locationDAO.RemoveRobotFromLocation(locationId, robotId);
+        var innerResult = locationDAO.RemoveRobotFromLocation(locationId, robotId);
+        // logging innerResult with function name 
+        _logger.LogInformation($"{MethodBase.GetCurrentMethod().Name} - {innerResult}");
 
-        // Return an empty response
         return Task.FromResult(new Empty());
     }
 
