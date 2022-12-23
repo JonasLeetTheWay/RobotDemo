@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+option csharp_namespace = "Frontend.Protos";
+
+package robotbackend;
+
+/* https://learn.microsoft.com/en-us/aspnet/core/grpc/protobuf?view=aspnetcore-5.0 */
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+service LocationProto {
+  // AddLocationObj contains the name, x, and y of the new location to be added.
+  rpc AddLocation(AddLocationObj) returns (LocationId);
+
+  // It contains the id of the location to get.
+  rpc GetLocationById(google.protobuf.StringValue) returns (LocationResponse);
+
+  // It contains the id of the robot whose location is to be retrieved.
+  rpc GetLocationByRobotId(google.protobuf.StringValue) returns (LocationResponse);
+
+  // It does not contain any fields as it retrieves all locations.
+  rpc GetLocations(google.protobuf.Empty) returns (LocationsResponse);
+
+  // It does not contain any fields as it searches for locations based on a filter.
+  rpc FindLocations(google.protobuf.Empty) returns (LocationResponse);
+
+  // It contains the id of the location to delete.
+  rpc DeleteLocation(LocationId) returns (google.protobuf.Empty);
+
+  // It contains the id of the location to update and the update fields.
+  rpc UpdateLocation(LocationIdAndUpdate) returns (google.protobuf.Empty);
+
+  // It contains the id of the location and the id of the robot to add to that location.
+  rpc AddRobotToLocation(LocationIdAndRobotId) returns (google.protobuf.Empty);
+
+  // It contains the id of the location and the id of the robot to remove from that location.
+  rpc RemoveRobotFromLocation(LocationIdAndRobotId) returns (google.protobuf.Empty);
+}
+
+// AddLocationObj contains the name, x, and y of the new location to be added.
+message AddLocationObj {
+  string name = 1;
+  double x = 2;
+  double y = 3;
+}
+
+// UpdateLocationObj contains the name and robotIds of the location to update.
+message UpdateLocationObj {
+  string name = 1;
+  repeated string robotIds = 2;
+}
+
+// LocationResponse contains the id, name, x, y, and robotIds of a location.
+message LocationResponse {
+  string id = 1;
+  string name = 2;
+  double x = 3;
+  double y = 4;
+  repeated string robotIds = 5;
+}
+
+// LocationsResponse contains a list of LocationResponse objects (contains the id, name, x, y, and robotIds of a location).
+message LocationsResponse {
+  repeated LocationResponse locations = 1;
+}
+
+// LocationId contains locationId.
+message LocationId {
+  string id = 1;
+}
+
+// LocationIdAndUpdate contains locationId to update and UpdateLocationObj (contains the name and robotIds of the location to update).
+message LocationIdAndUpdate {
+  string id = 1;
+  UpdateLocationObj update = 2;
+}
+
+// LocationIdAndRobotId contains the locationId and robotId
+message LocationIdAndRobotId {
+  string location_id = 1;
+  string robot_id = 2;
+}
+

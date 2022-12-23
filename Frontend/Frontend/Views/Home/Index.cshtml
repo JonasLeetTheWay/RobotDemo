@@ -1,0 +1,86 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Robot and Location Repository</title>
+</head>
+<body>
+    <h1>Robot and Location Repository</h1>
+
+    <h2>Robots</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Location</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="robot-list"></tbody>
+    </table>
+    <button id="add-robot-button">Add Robot</button>
+
+    <h2>Locations</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="location-list"></tbody>
+    </table>
+    <button id="add-location-button">Add Location</button>
+
+            <div id="edit-modal" style="display: none;">
+                <div>
+                    <h3 id="edit-modal-title"></h3>
+                    <form id="edit-form">
+                        <div>
+                            <label for="edit-id-input">ID:</label>
+                            <input type="text" id="edit-id-input" disabled>
+                        </div>
+                        <div>
+                            <label for="edit-name-input">Name:</label>
+                            <input type="text" id="edit-name-input" required>
+                        </div>
+                        <div id="edit-type-input-container" style="display: none;">
+                            <label for="edit-type-input">Type:</label>
+                            <input type="text" id="edit-type-input" required>
+                        </div>
+                        <div id="edit-location-input-container" style="display: none;">
+                            <label for="edit-location-input">Location:</label>
+                            <select id="edit-location-input"></select>
+                        </div>
+                        <div id="edit-latitude-input-container" style="display: none;">
+                            <label for="edit-latitude-input">Latitude:</label>
+                            <input type="number" id="edit-latitude-input" step="0.000001" required>
+                        </div>
+                        <div id="edit-longitude-input-container" style="display: none;">
+                            <label for="edit-longitude-input">Longitude:</label>
+                            <input type="number" id="edit-longitude-input" step="0.000001" required>
+                        </div>
+                        <div>
+                            <button type="submit">Save</button>
+                            <button id="cancel-edit-button">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <script src="~/js/site.js"></script>
+        </body>
+    </html>

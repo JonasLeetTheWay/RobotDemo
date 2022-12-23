@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>fdd232f7-3443-4ee5-a4cc-ade20636239c</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.50.0" />
+    <PackageReference Include="Grpc.Core" Version="2.46.5" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.50.0" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.50.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Backend\Backend\Backend.csproj" />
+  </ItemGroup>
+
+</Project>

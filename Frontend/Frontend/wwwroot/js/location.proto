@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+option csharp_namespace = "Backend";
+
+package robotbackend;
+
+/* https://learn.microsoft.com/en-us/aspnet/core/grpc/protobuf?view=aspnetcore-5.0 */
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+// The Location message represents a location
+message Location {
+  string id = 1;
+  string name = 2;
+  float x = 3;
+  float y = 4;
+  repeated string robots = 5;
+}
+
+// The Locations message is a list of locations
+message Locations {
+  repeated Location locations = 1;
+}
+
+// The LocationService service provides CRUD operations for locations
+service LocationProto {
+
+  rpc AddLocation(Location) returns (google.protobuf.Empty);
+
+  rpc GetLocationById(google.protobuf.StringValue) returns (Location);
+
+  rpc GetLocationByRobotId(google.protobuf.StringValue) returns (Location);
+
+  rpc UpdateLocation(Location) returns (google.protobuf.Empty);
+
+  rpc DeleteLocation(google.protobuf.StringValue) returns (google.protobuf.Empty);
+
+  rpc AddRobotToLocation(AddRobotToLocationRequest) returns (google.protobuf.Empty);
+
+  rpc RemoveRobotFromLocation(RemoveRobotFromLocationRequest) returns (google.protobuf.Empty);
+}
+
+message AddRobotToLocationRequest{
+	string locationId = 1;
+	string robotId = 2;
+}
+message RemoveRobotFromLocationRequest{
+	string locationId = 1;
+	string robotId = 2;
+}
