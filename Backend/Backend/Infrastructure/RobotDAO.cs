@@ -98,7 +98,7 @@ public class RobotDAO
         // then update the document with UpdateRobotBasedOnFields function
 
         var updateFields = new BsonDocument("curr_location", currLocation.ToBsonDocument())
-            .Add("$push", new BsonDocument("prev_locations_ids", currLocationId)));
+            .Add("$push", new BsonDocument("prev_locations_ids", currLocationId));
 
         return UpdateRobotBasedOnFields(robotId, updateFields);
     }
