@@ -12,12 +12,15 @@ public class LocationDAO
     private readonly IMongoCollection<Location> _collection;
     private readonly IMongoClient _client;
     private readonly IMongoDatabase _database;
-    public LocationDAO(IOptions<MongoDBSettings> settings)
+    private readonly ILogger _logger;
+
+    public LocationDAO(IOptions<MongoDBSettings> settings, ILogger logger)
     {
 
         _client = new MongoClient(settings.Value.ConnectionString);
         _database = _client.GetDatabase(settings.Value.DatabaseName);
         _collection = _database.GetCollection<Location>(settings.Value.CollectionName_Locations);
+        _logger = logger;
     }
     // id, name, x, y
     public string InsertLocation(Location location)
@@ -36,21 +39,91 @@ public class LocationDAO
     public Location? VerifyExistance(Location location)
     {
         // check if there's already data that matches new data's x,y
-        var filter = Builders<Location>.Filter.Eq("x", location.X) & Builders<Location>.Filter.Eq("y", location.Y);
-        var existing = _collection.Find(filter).SingleOrDefault();
-        if (existing == null)
+        var idFilter = Builders<Location>.Filter.Eq("_id", location.Id);
+        var coordinateFilter = Builders<Location>.Filter.Eq("x", location.X) & Builders<Location>.Filter.Eq("y", location.Y);
+        var nameFilter = Builders<Location>.Filter.Eq("name", location.Name);
+
+        Location? existing;
+
+        // check if there's already data that matches new data's id
+        try
         {
-            return null;
+            existing = _collection.Find(idFilter).SingleOrDefault();
+            if (existing == null)
+            {
+                // the name,coordinates are unique, so we must perform a check for both
+                existing = _collection.Find(nameFilter).SingleOrDefault();
+
+                if (existing == null)
+                {
+                    existing = _collection.Find(coordinateFilter).SingleOrDefault();
+                    if (existing == null)
+                    {
+                        return null;
+                    }
+                    return existing;
+                }
+                else
+                {
+                    var check = _collection.Find(coordinateFilter).SingleOrDefault();
+                    if (check != null)
+                    {
+                        try
+                        {
+                            if (check.Name == existing.Name)
+                            {
+                                throw new Exception("LocationDAO: VerifyExistance: Location name is not unique");
+                            }
+                            else if (check.X == existing.X && check.Y == existing.Y)
+                            {
+                                throw new Exception("LocationDAO: VerifyExistance: Location coordinates are not unique");
+                            }
+                            return existing;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogDebug(e.Message + "\n" +
+                                "Name: " + location.Name + "\n" +
+                                "X: " + location.X + "\n" +
+                                "Y: " + location.Y + "\n" +
+                                "Id: " + location.Id + "\n" +
+                                "Existing Id: " + existing.Id + "\n" +
+                                "Check Id: " + check.Id + "\n");
+                            return existing;
+                        }
+                    }
+                    return existing;
+                }
+            }
+            else
+            {
+                throw new Exception("LocationDAO: VerifyExistance: Data with same id already exist");
+                return existing;
+                
+            }
         }
-        else
+        catch (Exception e)
         {
+            _logger.LogDebug(e.Message + "\n" +
+                "Name: " + location.Name + "\n" +
+                "X: " + location.X + "\n" +
+                "Y: " + location.Y + "\n" +
+                "Id: " + location.Id + "\n" +
+                "Existing Id: " + existing.Id + "\n" +
+                "Check Id: " + check.Id + "\n");
             return existing;
         }
+
+        
     }
 
-    public List<Location> FindLocations()
+    public List<Location> GetLocations()
     {
-        return _collection.Find(new BsonDocument()).ToList();
+        return _collection.Find(_ => true).ToList();
+    }
+    public List<Location> FindLocations(FilterDefinition<Location> coordinateFilter)
+    {
+        return _collection.Find(coordinateFilter).ToList();
     }
     public List<Location> FindLocations(Expression<Func<Location, bool>> filter)
     {
@@ -63,13 +136,14 @@ public class LocationDAO
         // else, add them to updateFields
         // then update the document with UpdateLocationBasedOnFields function
 
-        var updateFields = new BsonDocument
+        var updateFields = new BsonDocument();
+        
+        if (location.X.HasValue && location.Y.HasValue)
         {
-            // x,y attribute will always be given
-            { "x", location.X },
-            { "y", location.Y }
-        };
-
+            updateFields.Add("x", location.X);
+            updateFields.Add("y", location.Y);
+        }
+        
         if (location.Name != null)
         {
             updateFields.Add("name", location.Name);
