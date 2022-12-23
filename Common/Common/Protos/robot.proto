@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+option csharp_namespace = "Common.Protos.Robot";
+
+package robotbackend;
+
+/* https://learn.microsoft.com/en-us/aspnet/core/grpc/protobuf?view=aspnetcore-5.0 */
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+
+// The RobotService service provides CRUD operations for robots
+service RobotProto {
+	
+  ////////// create //////////
+  rpc AddRobot(AddRobotRequest) returns (RobotId);
+
+  ////////// read //////////
+  rpc GetRobotById(RobotId) returns (RobotResponse);
+  rpc GetRobotByName(RobotId) returns (RobotResponse);
+
+  rpc GetRobotsByType(RobotType) returns (RobotResponse);
+  rpc GetRobotsByStatus(RobotStatus) returns (RobotResponse);
+  rpc GetRobotsByLocationId(LocationId) returns (RobotsResponse);
+  rpc GetRobots(google.protobuf.Empty) returns (RobotsResponse);
+
+  ////////// update //////////
+
+  rpc UpdateRobot(UpdateRobotRequest) returns (google.protobuf.Empty);
+
+  ////////// delete //////////
+  rpc DeleteRobot(RobotId) returns (google.protobuf.Empty);
+}
+
+////////// request objects //////////
+message AddRobotRequest {
+  string name = 1;
+  string type = 2;
+  string status = 3;
+  LocationObjFull currentLocation = 4;
+}
+
+message RobotId { // filter
+  string id = 1;
+}
+
+message LocationId { // filter
+  string id = 1;
+}
+
+message RobotType { // filter
+  string value = 1;
+}
+
+message RobotStatus { // filter
+  string value = 1;
+}
+
+message UpdateRobotRequest {
+  string id = 1;
+  LocationObjFull newLocation = 2;
+}
+
+////////// response objects //////////
+message RobotResponse {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string status = 4;
+  LocationObjFull currentLocation = 5;
+  repeated string previousLocationIds = 6;
+}
+
+message RobotsResponse {
+  repeated RobotResponse robots = 1;
+}
+
+////////// intermediary objects //////////
+// represents a location with full details
+message LocationObjFull {
+  string id = 1;
+  string name = 2;
+  double x = 3;
+  double y = 4;
+  repeated string robotIds = 5;
+}
+
