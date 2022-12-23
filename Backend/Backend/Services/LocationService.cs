@@ -26,7 +26,7 @@ public class LocationService : LocationProto.LocationProtoBase
     }
 
     ////////////////////////////////////// inner methods to avoid repetitive work //////////////////////////////////////
-    private LocationResponse MakeLocationResponse(string id, IEnumerable<string> robotIds, string? name, double? x, double? y)
+    private LocationResponse MakeLocationResponse(string id, IEnumerable<string> robotIds, string name = "null", double? x = double.MinValue, double? y = double.MinValue)
     {
         // check if there is an existingDoc that matches id 
 
@@ -48,7 +48,7 @@ public class LocationService : LocationProto.LocationProtoBase
         else
         {
             response.Id = id;
-            response.Name = name ?? "null";
+            response.Name = name;
             response.X = x ?? double.MinValue;
             response.Y = y ?? double.MinValue;
         }
@@ -65,22 +65,22 @@ public class LocationService : LocationProto.LocationProtoBase
         response.RobotIds.AddRange(robotIds);
         return response;
     }
-    private static Location MakeLocation(double? x, double? y, string? name, IEnumerable<string>? robotIds = default)
+    private static Location MakeLocation(double x = double.MinValue, double y = double.MinValue, string name = "null", IEnumerable<string>? robotIds = default)
     {
         if(robotIds?.ToList().Count == null || robotIds == null)
         {
             return new Location
             {
-                Name = name ?? "null",
-                X = x ?? double.MinValue,
-                Y = y ?? double.MinValue,
+                Name = name,
+                X = x,
+                Y = y,
             };
         }
         return new Location
         {
-            Name = name ?? "null",
-            X = x ?? double.MinValue,
-            Y = y ?? double.MinValue,
+            Name = name,
+            X = x,
+            Y = y,
             RobotIds = robotIds.ToList() // because Google.Protobuf.Collections.RepeatedField is not a RECOGNIZED LIST
         };
     }
@@ -227,11 +227,12 @@ public class LocationService : LocationProto.LocationProtoBase
         // intepret each attribute of request.Update (a UpdateLocationObj)
 
         var update = MakeLocation(default,default,request.Update.Name, request.Update.RobotIds);
+        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {update}");
 
         // Update the location in the database
         var innerResult = locationDAO.UpdateLocation(request.Id, update);
         // logging innerResult with function name 
-        _logger.LogInformation($"{MethodBase.GetCurrentMethod().Name} - {innerResult}");
+        _logger.LogInformation($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {innerResult}");
 
         return Task.FromResult(new Empty());
     }
@@ -248,7 +249,7 @@ public class LocationService : LocationProto.LocationProtoBase
         // Delete the location from the database
         var innerResult = locationDAO.DeleteLocation(request.Id);
         // logging innerResult with function name 
-        _logger.LogInformation($"{MethodBase.GetCurrentMethod().Name} - {innerResult}");
+        _logger.LogInformation($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {innerResult}");
         
         return Task.FromResult(new Empty());
     }
@@ -268,7 +269,7 @@ public class LocationService : LocationProto.LocationProtoBase
         // Add the robot to the location in the database
         var innerResult = locationDAO.AddRobotToLocation(locationId, robotId);
         // logging innerResult with function name 
-        _logger.LogInformation($"{MethodBase.GetCurrentMethod().Name} - {innerResult}");
+        _logger.LogInformation($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {innerResult}");
 
         return Task.FromResult(new Empty());
     }
@@ -287,7 +288,7 @@ public class LocationService : LocationProto.LocationProtoBase
         // Remove the robot from the location in the database
         var innerResult = locationDAO.RemoveRobotFromLocation(locationId, robotId);
         // logging innerResult with function name 
-        _logger.LogInformation($"{MethodBase.GetCurrentMethod().Name} - {innerResult}");
+        _logger.LogInformation($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {innerResult}");
 
         return Task.FromResult(new Empty());
     }
