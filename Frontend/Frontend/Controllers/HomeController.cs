@@ -1,4 +1,4 @@
-﻿using Backend.Protos;
+﻿using Common.Protos;
 using Frontend.Models;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.Mvc;

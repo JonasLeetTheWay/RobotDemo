@@ -8,13 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Protos\location.proto" />
-    <None Remove="Protos\robot.proto" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.21.12" />
     <PackageReference Include="Grpc.Net.Client" Version="2.50.0" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.49.0" />
     <PackageReference Include="Grpc.Tools" Version="2.51.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -23,8 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\location.proto" GrpcServices="Client" />
-    <Protobuf Include="Protos\robot.proto" GrpcServices="Client" />
+    <Protobuf Include="..\..\Common\Common\Protos\location.proto" GrpcServices="Client">
+      <Link>Protos\location.proto</Link>
+    </Protobuf>
+    <Protobuf Include="..\..\Common\Common\Protos\robot.proto" GrpcServices="Client">
+      <Link>Protos\robot.proto</Link>
+    </Protobuf>
   </ItemGroup>
 
 </Project>
