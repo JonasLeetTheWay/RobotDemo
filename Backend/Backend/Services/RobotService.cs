@@ -1,109 +1,217 @@
-﻿using Backend.Domain;
+﻿using Common.Domain;
 using Backend.Infrastructure;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-//using Backend.Protos;
+//using Common.Protos;
 
 using MongoDB.Bson;
+using Common.Protos.Robot;
+using Google.Protobuf.Collections;
+using Common.Protos.Location;
 
 namespace Backend.Services;
 
-//public class RobotService : RobotProto.RobotProtoBase
-//{
-//    private readonly RobotDAO robotDAO;
-//    private readonly _locationDAO locationDAO;
+// double.MinValue meaning the valuehasnt been assigned
 
-//    public RobotService(RobotDAO robotDAO, _locationDAO locationDAO)
-//    {
-//        this.robotDAO = robotDAO;
-//        this.locationDAO = locationDAO;
-//    }
+public class RobotService : RobotProto.RobotProtoBase
+{
+    private readonly RobotDAO robotDAO;
+    private readonly LocationDAO locationDAO;
 
-//    // Implement the AddRobot method
-//    public override Task<Robot> AddRobot(Robot request, ServerCallContext context)
-//    {
-//        // Validate the request
-//        if (request == null || request.CurrentLocation == null)
-//        {
-//            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
-//        }
+    ////////////////////////////////////// inner methods to avoid repetitive work //////////////////////////////////////
+    private LocationObjFull MakeLocationObjFull(string id, IEnumerable<string> robotIds, string? name, double? x, double? y)
+    {
+        // check if there is an existingDoc that matches id 
 
-//        // Add the robot to the database
-//        string robotId = robotDAO.InsertRobot(request);
+        var existing = locationDAO.FindLocations(l => l.Id == id).SingleOrDefault();
+        var response = new LocationObjFull();
 
-//        // Add the robot to the location
-//        locationDAO.AddRobotToLocation(request.CurrentLocation, robotId);
+        if (existing != null)
+        {
+            response.Id = id;
+            response.Name = existing.Name ?? "null";
+            response.X = existing.X ?? double.MinValue;
+            response.Y = existing.Y ?? double.MinValue;
+            if (existing.RobotIds != null)
+            {
+                response.RobotIds.AddRange(existing.RobotIds);
+            }
 
-//        // Return the added robot in the response
-//        return Task.FromResult(request);
-//    }
+        }
+        else
+        {
+            response.Id = id;
+            response.Name = name ?? "null";
+            response.X = x ?? double.MinValue;
+            response.Y = y ?? double.MinValue;
+        }
 
-//    // Implement the GetRobot method
-//    public override Task<Robot> GetRobot(StringValue request, ServerCallContext context)
-//    {
-//        // Validate the request
-//        if (string.IsNullOrEmpty(request.Value))
-//        {
-//            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
-//        }
-//        // Find the robot in the database
-//        var robot = robotDAO.FindRobots().Find(r => r.Id == request.Value);
-//        if (robot == null)
-//        {
-//            throw new RpcException(new Status(StatusCode.NotFound, "Robot not found"));
-//        }
+        response.RobotIds.AddRange(robotIds);
 
-//        // Return the found robot in the response
-//        return Task.FromResult(robot);
-//    }
+        return response;
+    }
 
-//    // Implement the UpdateRobot method
-//    public override Task<Robot> UpdateRobot(Robot request, ServerCallContext context)
-//    {
-//        // Validate the request
-//        if (request == null || request.CurrentLocation == null)
-//        {
-//            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
-//        }
+    private RobotResponse MakeRobotResponse(string id, string name, string type, string status, LocationObjFull obj, IEnumerable<string> locationIds)
+    {
+        var existing = robotDAO.VerifyExistance(new Robot { Id = name, Name = name });
+        var response = new RobotResponse();
 
-//        // Find the robot in the database
-//        var robot = robotDAO.FindRobots().Find(r => r.Id == request.Id);
-//        if (robot == null)
-//        {
-//            throw new RpcException(new Status(StatusCode.NotFound, "Robot not found"));
-//        }
+        
+            // check if there is an existingDoc that matches id 
 
-//        // Update the robot in the database
-//        robotDAO.UpdateRobot(request.Id, request);
+            var existing = robotDAO.FindRobots(r => r.Id == id).SingleOrDefault();
+            var response = new RobotResponse();
 
-//        // Update the location of the robot
-//        robotDAO.UpdateRobotLocation(request.Id, request.CurrentLocation);
+            if (existing != null)
+            {
+                response.Name = existing.Name ?? "null";
+                LocationObjFull locationObjFull = new LocationObjFull();
+                response.CurrentLocation = existing.CurrentLocation ?? locationObjFull;
+            }
+            else
+            {
+                response.Name = name ?? "null";
+                response.CurrentLocation = locationId ?? "null";
+            }
+            
+        response.PreviousLocationIds.AddRange(locationIds);
 
-//        // Return the updated robot in the response
-//        return Task.FromResult(request);
-//    }
 
-//    // Implement the DeleteRobot method
-//    public override Task<Empty> DeleteRobot(StringValue request, ServerCallContext context)
-//    {
-//        // Validate the request
-//        if (string.IsNullOrEmpty(request.Value))
-//        {
-//            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
-//        }
+        return response;
+        
 
-//        // Find the robot in the database
-//        var robot = robotDAO.FindRobots().Find(r => r.Id == request.Value);
-//        if (robot == null)
-//        {
-//            throw new RpcException(new Status(StatusCode.NotFound, "Robot not found"));
-//        }
+        response.Name = name;
+        response.Type = type;
+        response.Status = status;
+        response.CurrentLocation = obj;
+        return response;
+    }
+    
 
-//        // Delete the robot from the database
-//        robotDAO.DeleteRobot(request.Value);
-//        locationDAO.RemoveRobotFromLocation(robot.CurrentLocation, robot.Id);
+    private static UpdateRobotRequest MakeUpdateRobotRequest(string id, LocationObjFull? newLocation = default)
+    {
+        var response = new UpdateRobotRequest();
+        response.Id = id;
+        response.NewLocation = newLocation;
+        return response;
+    }
+    private static Location MakeLocation(double? x, double? y, string? name, IEnumerable<string>? robotIds = default)
+    {
+        if (robotIds?.ToList().Count == null || robotIds == null)
+        {
+            return new Location
+            {
+                Name = name ?? "null",
+                X = x ?? double.MinValue,
+                Y = y ?? double.MinValue,
+            };
+        }
+        return new Location
+        {
+            Name = name ?? "null",
+            X = x ?? double.MinValue,
+            Y = y ?? double.MinValue,
+            RobotIds = robotIds.ToList() // because Google.Protobuf.Collections.RepeatedField is not a RECOGNIZED LIST
+        };
+    }
+    private IEnumerable<string> makeFakeRobotIdsArray()
+    {
+        return new List<string> { "fake1", "fake2" };
+    }
 
-//        // Return an empty response
-//        return Task.FromResult(new Empty());
-//    }
-//}
+    ////////////////////////////////////// inner methods to avoid repetitive work //////////////////////////////////////
+
+    public RobotService(RobotDAO robotDAO, LocationDAO locationDAO)
+    {
+        this.robotDAO = robotDAO;
+        this.locationDAO = locationDAO;
+    }
+
+    // Implement the AddRobot method
+    public override Task<Robot> AddRobot(Robot request, ServerCallContext context)
+    {
+        // Validate the request
+        if (request == null || request.CurrentLocation == null)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
+        }
+
+        // Add the robot to the database
+        string robotId = robotDAO.InsertRobot(request);
+
+        // Add the robot to the location
+        locationDAO.AddRobotToLocation(request.CurrentLocation, robotId);
+
+        // Return the added robot in the response
+        return Task.FromResult(request);
+    }
+
+    // Implement the GetRobot method
+    public override Task<Robot> GetRobot(StringValue request, ServerCallContext context)
+    {
+        // Validate the request
+        if (string.IsNullOrEmpty(request.Value))
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
+        }
+        // Find the robot in the database
+        var robot = robotDAO.FindRobots().Find(r => r.Id == request.Value);
+        if (robot == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Robot not found"));
+        }
+
+        // Return the found robot in the response
+        return Task.FromResult(robot);
+    }
+
+    // Implement the UpdateRobot method
+    public override Task<Robot> UpdateRobot(Robot request, ServerCallContext context)
+    {
+        // Validate the request
+        if (request == null || request.CurrentLocation == null)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
+        }
+
+        // Find the robot in the database
+        var robot = robotDAO.FindRobots().Find(r => r.Id == request.Id);
+        if (robot == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Robot not found"));
+        }
+
+        // Update the robot in the database
+        robotDAO.UpdateRobot(request.Id, request);
+
+        // Update the location of the robot
+        robotDAO.UpdateRobotLocation(request.Id, request.CurrentLocation);
+
+        // Return the updated robot in the response
+        return Task.FromResult(request);
+    }
+
+    // Implement the DeleteRobot method
+    public override Task<Empty> DeleteRobot(StringValue request, ServerCallContext context)
+    {
+        // Validate the request
+        if (string.IsNullOrEmpty(request.Value))
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
+        }
+
+        // Find the robot in the database
+        var robot = robotDAO.FindRobots().Find(r => r.Id == request.Value);
+        if (robot == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Robot not found"));
+        }
+
+        // Delete the robot from the database
+        robotDAO.DeleteRobot(request.Value);
+        locationDAO.RemoveRobotFromLocation(robot.CurrentLocation, robot.Id);
+
+        // Return an empty response
+        return Task.FromResult(new Empty());
+    }
+}
