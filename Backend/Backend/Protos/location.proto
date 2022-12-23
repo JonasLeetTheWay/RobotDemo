@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option csharp_namespace = "Backend.Protos";
+option csharp_namespace = "Common.Protos";
 
 package robotbackend;
 

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option csharp_namespace = "Backend.Protos";
+option csharp_namespace = "Common.Protos";
 
 package robotbackend;
 
@@ -19,11 +19,12 @@ message LocationObjFull {
 
 // The Robot message represents a robot
 message RobotObj {
-  string name = 1;
-  string type = 2;
-  string status = 3;
-  LocationObjFull currentLocation = 4;
-  repeated string previousLocationIds = 5;
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string status = 4;
+  LocationObjFull currentLocation = 5;
+  repeated string previousLocationIds = 6;
 }
 
 message AddRobotObj {
@@ -38,10 +39,6 @@ message RobotList {
   repeated RobotObj robots = 1;
 }
 
-message RobotId {
-  string id = 1;
-}
-
 message UpdateRobotRequest {
   string id = 1;
   LocationObjFull newLocation = 2;
@@ -50,10 +47,10 @@ message UpdateRobotRequest {
 // The RobotService service provides CRUD operations for robots
 service RobotProto {
   // Add a new robot
-  rpc AddRobot(AddRobotObj) returns (RobotId);
+  rpc AddRobot(AddRobotObj) returns (google.protobuf.StringValue);
 
   // Get a specific robot
-  rpc GetRobot(RobotId) returns (RobotObj);
+  rpc GetRobot(google.protobuf.StringValue) returns (RobotObj);
 
   // Get a list of all robots
   rpc GetRobots(google.protobuf.Empty) returns (RobotList);
@@ -62,6 +59,6 @@ service RobotProto {
   rpc UpdateRobot(UpdateRobotRequest) returns (google.protobuf.Empty);
 
   // Delete a specific robot
-  rpc DeleteRobot(RobotId) returns (google.protobuf.Empty);
+  rpc DeleteRobot(google.protobuf.StringValue) returns (google.protobuf.Empty);
 }
 
