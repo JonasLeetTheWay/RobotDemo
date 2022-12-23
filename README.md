@@ -17,7 +17,6 @@ This project is a system that allows users to track and manage a fleet of autono
 - `MVC Frontend`: a common .NET framework for developing high-performant web application
 - `DAO`: a data access object (DAO) for interacting with a specific collection in a database.
 - `Dependency injection`: a software design pattern that allows for the separation of concerns and the management of dependencies between objects
-- `MongoDB`: a NoSQL database that stores data in flexible, JSON-like documents
 
 
 ## Incoming:
