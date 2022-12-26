@@ -27,10 +27,10 @@ namespace Tests.Server.UnitTests.Helpers
         private readonly ServerCallContext _serverCallContext;
 
         public T Current { get; private set; } = null!;
-
+        
         public TestAsyncStreamReader(ServerCallContext serverCallContext)
         {
-            _channel = Channel.CreateUnbounded<T>();
+            _channel = System.Threading.Channels.Channel.CreateUnbounded<T>();
             _serverCallContext = serverCallContext;
         }
 
