@@ -1,6 +1,8 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Grpc.Net.Client;
-using Frontend.Protos;
+using Common.Protos.Location;
+using Common.Protos.Robot;
+
 using Google.Protobuf.WellKnownTypes;
 using Newtonsoft.Json;
 
@@ -24,26 +26,30 @@ Robot {
 //    Type = "hard",
 //    CurrentLocation = "1",
 //};
-var l = new AddLocationObj
+while(Console.ReadKey().Key == ConsoleKey.Enter)
 {
-    Name = "a",
-    X = 10,
-    Y = 10.1,
-};
-var l2 = new UpdateLocationObj();
-l2.Name = string.Empty;
-List<string> fakeIds = new() { "1", "1", "1" };
-l2.RobotIds.AddRange(fakeIds);
+    var l = new AddLocationRequest
+    {
+        Name = "a",
+        X = 10,
+        Y = -10,
+    };
+    var l2 = new UpdateLocationObj();
+    l2.Name = "dd";
+    List<string> fakeIds = new() { "1", "1", "1" };
+    l2.RobotIds.AddRange(fakeIds);
 
-var res = locationClient.AddLocation(l);
-Console.WriteLine("added location id: ", res.Id);
-Console.WriteLine(locationClient.GetLocationById(new StringValue { Value = res.Id }));
+    var res = locationClient.AddLocation(l);
+    Console.WriteLine("added location id: ", res.Id);
+    Console.WriteLine(locationClient.GetLocationById(new Common.Protos.Location.LocationId { Id = res.Id }));
 
 
-locationClient.UpdateLocation(new LocationIdAndUpdate { Id = res.Id, Update = l2 });
-Console.WriteLine(locationClient.GetLocationById(new StringValue { Value = res.Id }));
+    locationClient.UpdateLocation(new LocationIdAndUpdate { Id = "63a5c1d2870279a77e77499a", Update = l2 });
+    Console.WriteLine(locationClient.GetLocationById(new Common.Protos.Location.LocationId { Id = res.Id }));
 
-var response = locationClient.GetLocations(new Empty());
+    var response = locationClient.GetLocations(new Empty());
 
-string json = JsonConvert.SerializeObject(response, Formatting.Indented);
-Console.WriteLine(json);
+    string json = JsonConvert.SerializeObject(response, Formatting.Indented);
+    Console.WriteLine(json);
+}
+

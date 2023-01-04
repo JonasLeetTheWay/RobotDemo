@@ -16,18 +16,22 @@ namespace Backend.Services;
 
 public class LocationService : LocationProto.LocationProtoBase
 {
-    private readonly LocationDAO locationDAO;
-    private readonly ILogger _logger;
+    private readonly ILocationDAO locationDAO;
+    private readonly ILogger? _logger;
 
-    public LocationService(LocationDAO locationDAO, ILogger logger)
+    public LocationService(ILocationDAO locationDAO, ILogger? logger =null)
     {
         this.locationDAO = locationDAO;
         _logger = logger;
     }
 
     ////////////////////////////////////// inner methods to avoid repetitive work //////////////////////////////////////
-    private LocationResponse MakeLocationResponse(string id, IEnumerable<string> robotIds, string name = "null", double? x = double.MinValue, double? y = double.MinValue)
+    private LocationResponse MakeLocationResponse(string id, IEnumerable<string> robotIds, string? name, double? x, double? y)
     {
+
+        x ??= double.MinValue;
+        y ??= double.MinValue;
+        name ??= "null";
         // check if there is an existingDoc that matches id 
 
         var existing = locationDAO.FindLocations(l => l.Id == id).SingleOrDefault();
@@ -65,9 +69,12 @@ public class LocationService : LocationProto.LocationProtoBase
         response.RobotIds.AddRange(robotIds);
         return response;
     }
-    private static Location MakeLocation(double x = double.MinValue, double y = double.MinValue, string name = "null", IEnumerable<string>? robotIds = default)
+    private static Location MakeLocation(double? x, double? y, string? name, IEnumerable<string>? robotIds = default)
     {
-        if(robotIds?.ToList().Count == null || robotIds == null)
+        x ??= double.MinValue;
+        y ??= double.MinValue;
+        name ??= "null";
+        if (robotIds?.ToList().Count == null || robotIds == null)
         {
             return new Location
             {
@@ -225,9 +232,9 @@ public class LocationService : LocationProto.LocationProtoBase
         }
 
         // intepret each attribute of request.Update (a UpdateLocationObj)
-
-        var update = MakeLocation(default,default,request.Update.Name, request.Update.RobotIds);
-        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {update}");
+        var existing = locationDAO.VerifyExistance(new Location { Id = request.Id });
+        var update = MakeLocation(existing?.X, existing?.Y,request.Update.Name, request.Update.RobotIds);
+        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name}, expanded - ", update.Id, update.X, update.Y, update.Name, update.RobotIds, "existing-",existing?.Id);
 
         // Update the location in the database
         var innerResult = locationDAO.UpdateLocation(request.Id, update);

@@ -1,18 +1,18 @@
 using Grpc.Net.Client;
-using Backend;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using System.Net;
 using Backend.Services;
-using Backend.Protos;
+using Common.Protos.Location;
+using Common.Protos.Robot;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
 // Add services to the container.
 services.AddControllersWithViews();
 
-services.AddGrpcClient<RobotProto.RobotProtoClient>((serviceProvider, channel) => new RobotProto.RobotProtoClient(channel));
-services.AddGrpcClient<LocationProto.LocationProtoClient>((serviceProvider, channel) => new LocationProto.LocationProtoClient(channel));
-
+// Add gRPC client services
+services.AddGrpcClient<LocationProto.LocationProtoClient>(o => o.Address = new Uri("https://localhost:5001"));
+services.AddGrpcClient<RobotProto.RobotProtoClient>(o => o.Address = new Uri("https://localhost:5001"));
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -53,7 +53,8 @@ app.UseCors();
 
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapGrpcService<GreeterService>().RequireCors("AllowAll");
+    endpoints.MapGrpcService<LocationService>().RequireCors("AllowAll");
+    //endpoints.MapGrpcService<RobotService>().RequireCors("AllowAll");
 });
 
 app.UseAuthorization();

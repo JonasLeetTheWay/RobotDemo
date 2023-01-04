@@ -4,10 +4,11 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Backend.Infrastructure;
 
-public class LocationDAO
+public class LocationDAO : ILocationDAO
 {
     private readonly IMongoCollection<Location> _collection;
     private readonly IMongoClient _client;
@@ -26,59 +27,57 @@ public class LocationDAO
     public string InsertLocation(Location location)
     {
         var existing = VerifyExistance(location);
-        if (existing == null){
+        if (existing == null)
+        {
             _collection.InsertOne(location);
             return location.Id;
         }
         else
         {
-            UpdateLocation(existing.Id,location);
+            UpdateLocation(existing.Id, location);
             return existing.Id;
         }
     }
     public Location? VerifyExistance(Location location)
     {
         // check if there's already data that matches new data's x,y
-        var idFilter = Builders<Location>.Filter.Eq("_id", location.Id);
+
         var coordinateFilter = Builders<Location>.Filter.Eq("x", location.X) & Builders<Location>.Filter.Eq("y", location.Y);
         var nameFilter = Builders<Location>.Filter.Eq("name", location.Name);
 
-        Location? existing;
+        var e1 = _collection.Find(l => l.Id == location.Id).FirstOrDefault();
+        var e2 = _collection.Find(coordinateFilter).FirstOrDefault();
+        var e3 = _collection.Find(nameFilter).FirstOrDefault();
 
         // check if there's already data that matches new data's id
         try
         {
-            existing = _collection.Find(idFilter).SingleOrDefault();
-            if (existing == null)
-            {
-                // the name,coordinates are unique, so we must perform a check for both
-                existing = _collection.Find(nameFilter).SingleOrDefault();
 
-                if (existing == null)
+            if (e1 == null)
+            {
+                if (e2 == null)
                 {
-                    existing = _collection.Find(coordinateFilter).SingleOrDefault();
-                    if (existing == null)
+                    if (e3 == null)
                     {
                         return null;
                     }
-                    return existing;
+                    return e3;
                 }
                 else
                 {
-                    var check = _collection.Find(coordinateFilter).SingleOrDefault();
-                    if (check != null)
+                    if (e3 != null)
                     {
                         try
                         {
-                            if (check.Name == existing.Name)
+                            if (e2.Name != e3.Name)
                             {
                                 throw new Exception("LocationDAO: VerifyExistance: Location name is not unique");
                             }
-                            else if (check.X == existing.X && check.Y == existing.Y)
+                            else if (e2.X != e3.X && e2.Y != e3.Y)
                             {
                                 throw new Exception("LocationDAO: VerifyExistance: Location coordinates are not unique");
                             }
-                            return existing;
+                            return e2;
                         }
                         catch (Exception e)
                         {
@@ -86,20 +85,18 @@ public class LocationDAO
                                 "Name: " + location.Name + "\n" +
                                 "X: " + location.X + "\n" +
                                 "Y: " + location.Y + "\n" +
-                                "Id: " + location.Id + "\n" +
-                                "Existing Id: " + existing.Id + "\n" +
-                                "Check Id: " + check.Id + "\n");
-                            return existing;
+                                "e1 Id: " + location.Id + "\n" +
+                                "e2 Id: " + e2.Id + "\n" +
+                                "e3 Id: " + e3.Id + "\n");
+                            return e2;
                         }
                     }
-                    return existing;
+                    return e2;
                 }
             }
             else
             {
                 throw new Exception("LocationDAO: VerifyExistance: Data with same id already exist");
-                return existing;
-                
             }
         }
         catch (Exception e)
@@ -108,13 +105,11 @@ public class LocationDAO
                 "Name: " + location.Name + "\n" +
                 "X: " + location.X + "\n" +
                 "Y: " + location.Y + "\n" +
-                "Id: " + location.Id + "\n" +
-                "Existing Id: " + existing.Id + "\n" +
-                "Check Id: " + check.Id + "\n");
-            return existing;
+                "Id: " + location.Id + "\n");
+            return e1;
         }
 
-        
+
     }
 
     public List<Location> GetLocations()
@@ -137,18 +132,21 @@ public class LocationDAO
         // then update the document with UpdateLocationBasedOnFields function
 
         var updateFields = new BsonDocument();
-        
-        if (location.X.HasValue && location.Y.HasValue)
+        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - ", location);
+        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name}, x,y expanded - ", location.Id, location.X, location.Y, location.Name, location.RobotIds);
+
+        if (location.X != double.MinValue && location.Y != double.MinValue)
         {
+            Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name}, x,y not uninitialized - ", location);
             updateFields.Add("x", location.X);
             updateFields.Add("y", location.Y);
         }
-        
+
         if (location.Name != null)
         {
             updateFields.Add("name", location.Name);
         }
-            
+
         if (location.RobotIds != null)
         {
             // note that this is "$set", not "$addToSet" nor "$push"
@@ -156,31 +154,34 @@ public class LocationDAO
             // so be careful to Add RobotIds when using this function
             updateFields.Add("robots", new BsonArray(location.RobotIds));
         }
+        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {updateFields}");
+
         return UpdateLocationBasedOnFields(id, updateFields);
     }
 
     public DeleteResult DeleteLocation(string id)
     {
-        return _collection.DeleteOne(new BsonDocument("_id", id));
+        return _collection.DeleteOne(new BsonDocument("Id", id));
     }
 
     public UpdateResult AddRobotToLocation(string locationId, string robotId)
     {
         return _collection.UpdateOne(
-            new BsonDocument("_id", locationId),
+            new BsonDocument("Id", locationId),
         new BsonDocument("$addToSet", new BsonDocument("robots", robotId)));
     }
 
     public UpdateResult RemoveRobotFromLocation(string locationId, string robotId)
     {
         return _collection.UpdateOne(
-        new BsonDocument("_id", locationId),
+        new BsonDocument("Id", locationId),
             new BsonDocument("$pull", new BsonDocument("robots", robotId)));
     }
 
     // RemoveFields is default to an empty list
     private UpdateResult UpdateLocationBasedOnFields(string id, BsonDocument updateFields, List<string>? removeFields = default)
     {
+        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - updateFields: {updateFields}");
         var updateDoc = new BsonDocument();
 
         if (updateFields != null)
@@ -193,10 +194,12 @@ public class LocationDAO
             removeFields.ForEach(field => unsetFields.Add(field, 1));
             updateDoc.Add("$unset", unsetFields);
         }
+        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - updateDoc: {updateDoc}");
 
-        var filter = Builders<Location>.Filter.Eq("_id", id);
         var update = Builders<Location>.Update.Combine(updateDoc);
-        var result = _collection.UpdateOne(filter, update);
+        var result = _collection.UpdateOne(l => l.Id == id, update);
+        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - result: {result}");
+
         return result;
 
         /*
