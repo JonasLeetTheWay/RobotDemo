@@ -13,7 +13,6 @@ services.Configure<MongoDBSettings>(
 
 services.AddScoped<LocationDAO>();
 services.AddScoped<RobotDAO>();
-services.AddScoped<ILogger,Logger<LocationDAO>>();
 
 
 builder.Services.AddCors(o => o.AddPolicy("AllowAll", builder =>
@@ -27,8 +26,9 @@ builder.Services.AddCors(o => o.AddPolicy("AllowAll", builder =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.MapGrpcService<GreeterService>();
 app.MapGrpcService<LocationService>();
-//app.MapGrpcService<RobotService>();
+app.MapGrpcService<RobotService>();
 app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
 app.Run();
