@@ -1,7 +1,6 @@
-﻿using Common.Protos.Location;
-using Common.Protos.Robot;
-
+﻿using Common.Protos;
 using Frontend.Models;
+using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
@@ -47,26 +46,19 @@ namespace Frontend.Controllers
         public async Task<IActionResult> Index(string robotId)
         {
             // Get the robot by id
-            var robotResponse = await _robotClient.GetRobotByIdAsync(new Common.Protos.Robot.RobotId { Id = robotId });
-            var robot = robotResponse.Id;
+            var robotResponse = await _robotClient.GetRobotAsync(new StringValue { Value = robotId });
+            var robot = robotResponse.Robot;
 
             // Get the list of previous location ids for the robot
-            var previousLocationIds = robotResponse.PreviousLocationIds;
+            var previousLocationIds = robot.PreviousLocationIds;
 
             // Get the locations for each previous location id
             var previousLocations = new List<LocationObjFull>();
             foreach (var locationId in previousLocationIds)
             {
-                var locationResponse = await _locationClient.GetLocationByIdAsync(new Common.Protos.Location.LocationId { Id = locationId });
-                var localobjfull = new LocationObjFull
-                {
-                    Id = locationResponse.Id,
-                    Name = locationResponse.Name,
-                    X = locationResponse.X,
-                    Y = locationResponse.Y,
-                };
-                localobjfull.RobotIds.AddRange(locationResponse.RobotIds);
-                previousLocations.Add(localobjfull);
+                var locationResponse = await _locationClient.GetLocationByIdAsync(new StringValue { Value = locationId });
+                var location = locationResponse.Location;
+                previousLocations.Add(location);
             }
 
             // Pass the list of previous locations to the view
