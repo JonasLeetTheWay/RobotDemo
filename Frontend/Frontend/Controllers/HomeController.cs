@@ -51,7 +51,7 @@ namespace Frontend.Controllers
             var robot = robotResponse.Id;
 
             // Get the list of previous location ids for the robot
-            var previousLocationIds = robot.PreviousLocationIds;
+            var previousLocationIds = robotResponse.PreviousLocationIds;
 
             // Get the locations for each previous location id
             var previousLocations = new List<LocationObjFull>();
