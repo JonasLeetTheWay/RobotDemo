@@ -25,7 +25,7 @@ Robot {
 //    Type = "hard",
 //    CurrentLocation = "1",
 //};
-while(Console.ReadKey().Key == ConsoleKey.Enter)
+while (Console.ReadKey().Key == ConsoleKey.Enter)
 {
     var l = new AddLocationRequest
     {

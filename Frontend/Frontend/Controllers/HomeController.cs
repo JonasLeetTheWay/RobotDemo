@@ -1,7 +1,7 @@
 ﻿using Common.Protos;
-using Common.Protos;
 
 using Frontend.Models;
+using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
@@ -51,7 +51,7 @@ namespace Frontend.Controllers
             var robot = robotResponse.Id;
 
             // Get the list of previous location ids for the robot
-            var previousLocationIds = robotResponse.PreviousLocationIds;
+            var previousLocationIds = robot.PreviousLocationIds;
 
             // Get the locations for each previous location id
             var previousLocations = new List<LocationObjFull>();
