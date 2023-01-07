@@ -1,7 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Grpc.Net.Client;
-using Common.Protos.Location;
-using Common.Protos.Robot;
+using Common.Protos;
 
 using Google.Protobuf.WellKnownTypes;
 using Newtonsoft.Json;
@@ -41,11 +40,11 @@ while(Console.ReadKey().Key == ConsoleKey.Enter)
 
     var res = locationClient.AddLocation(l);
     Console.WriteLine("added location id: ", res.Id);
-    Console.WriteLine(locationClient.GetLocationById(new Common.Protos.Location.LocationId { Id = res.Id }));
+    Console.WriteLine(locationClient.GetLocationById(new Common.Protos.LocationId { Id = res.Id }));
 
 
     locationClient.UpdateLocation(new LocationIdAndUpdate { Id = "63a5c1d2870279a77e77499a", Update = l2 });
-    Console.WriteLine(locationClient.GetLocationById(new Common.Protos.Location.LocationId { Id = res.Id }));
+    Console.WriteLine(locationClient.GetLocationById(new Common.Protos.LocationId { Id = res.Id }));
 
     var response = locationClient.GetLocations(new Empty());
 

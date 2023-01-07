@@ -1,6 +1,7 @@
 syntax = "proto3";
 
-option csharp_namespace = "Common.Protos.Robot";
+option csharp_namespace = "Common.Protos";
+import "Protos/shared_model.proto";
 
 package robotbackend;
 
@@ -39,14 +40,7 @@ message AddRobotRequest {
   string status = 3;
   LocationObjFull currentLocation = 4;
 }
-
-message RobotId { // filter
-  string id = 1;
-}
-
-message LocationId { // filter
-  string id = 1;
-}
+// RobotId and LocationId filter are imported from shared_model.proto
 
 message RobotType { // filter
   string value = 1;

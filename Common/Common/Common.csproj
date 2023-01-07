@@ -10,6 +10,7 @@
   <ItemGroup>
     <None Remove="Protos\location.proto" />
     <None Remove="Protos\robot.proto" />
+    <None Remove="Protos\shared_model.proto" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +26,7 @@
   <ItemGroup>
     <Protobuf Include="Protos\location.proto" />
     <Protobuf Include="Protos\robot.proto" />
+    <Protobuf Include="Protos\shared_model.proto" />
   </ItemGroup>
 
 </Project>

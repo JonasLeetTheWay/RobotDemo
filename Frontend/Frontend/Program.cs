@@ -2,8 +2,7 @@ using Grpc.Net.Client;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using System.Net;
 using Backend.Services;
-using Common.Protos.Location;
-using Common.Protos.Robot;
+using Common.Protos;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;

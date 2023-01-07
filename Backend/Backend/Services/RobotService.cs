@@ -5,9 +5,9 @@ using Grpc.Core;
 //using Common.Protos;
 
 using MongoDB.Bson;
-using Common.Protos.Robot;
+using Common.Protos;
 using Google.Protobuf.Collections;
-using Common.Protos.Location;
+using Common.Protos;
 
 namespace Backend.Services;
 

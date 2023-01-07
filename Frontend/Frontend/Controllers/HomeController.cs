@@ -1,5 +1,5 @@
-﻿using Common.Protos.Location;
-using Common.Protos.Robot;
+﻿using Common.Protos;
+using Common.Protos;
 
 using Frontend.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -47,7 +47,7 @@ namespace Frontend.Controllers
         public async Task<IActionResult> Index(string robotId)
         {
             // Get the robot by id
-            var robotResponse = await _robotClient.GetRobotByIdAsync(new Common.Protos.Robot.RobotId { Id = robotId });
+            var robotResponse = await _robotClient.GetRobotByIdAsync(new Common.Protos.RobotId { Id = robotId });
             var robot = robotResponse.Id;
 
             // Get the list of previous location ids for the robot
@@ -57,7 +57,7 @@ namespace Frontend.Controllers
             var previousLocations = new List<LocationObjFull>();
             foreach (var locationId in previousLocationIds)
             {
-                var locationResponse = await _locationClient.GetLocationByIdAsync(new Common.Protos.Location.LocationId { Id = locationId });
+                var locationResponse = await _locationClient.GetLocationByIdAsync(new Common.Protos.LocationId { Id = locationId });
                 var localobjfull = new LocationObjFull
                 {
                     Id = locationResponse.Id,

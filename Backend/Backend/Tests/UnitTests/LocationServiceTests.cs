@@ -2,7 +2,7 @@
 using Backend.Services;
 using Backend.Settings;
 using Common.Domain;
-using Common.Protos.Location;
+using Common.Protos;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Options;

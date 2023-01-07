@@ -1,6 +1,6 @@
 ﻿using Common.Domain;
 using Backend.Infrastructure;
-using Common.Protos.Location;
+using Common.Protos;
 using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
@@ -8,7 +8,7 @@ using MongoDB.Bson;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml.Linq;
-//using Common.Protos.Robot;
+//using Common.Protos;
 using MongoDB.Driver;
 using System.Reflection;
 
