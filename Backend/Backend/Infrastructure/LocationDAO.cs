@@ -5,6 +5,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
 
 namespace Backend.Infrastructure;
 
@@ -23,21 +24,32 @@ public class LocationDAO : ILocationDAO
         _collection = _database.GetCollection<Location>(settings.Value.CollectionName_Locations);
         _logger = logger;
     }
+
+    public void ClearCollection()
+    {
+        _collection.DeleteMany(Builders<Location>.Filter.Empty);
+    }
     // id, name, x, y
     public string InsertLocation(Location location)
     {
+        Console.WriteLine("parameter id" + location.Id);
         var existing = VerifyExistance(location);
         if (existing == null)
         {
             _collection.InsertOne(location);
+            Console.WriteLine("existing==null, _collection.InsertOne id" + location.Id);
             return location.Id;
         }
         else
         {
             UpdateLocation(existing.Id, location);
+            Console.WriteLine("existing!=null, existing data id" + existing.Id);
             return existing.Id;
         }
     }
+
+   
+
     public Location? VerifyExistance(Location location)
     {
         // check if there's already data that matches new data's x,y
@@ -61,35 +73,21 @@ public class LocationDAO : ILocationDAO
                     {
                         return null;
                     }
+                    if (location.Name == e3.Name && (location.X != e3.X || location.Y != e3.Y))
+                    {
+                        throw new Exception("LocationDAO: VerifyExistance: Location coordinates are not unique");
+                    }
                     return e3;
                 }
                 else
                 {
                     if (e3 != null)
                     {
-                        try
+                        if (e2.Name != e3.Name)
                         {
-                            if (e2.Name != e3.Name)
-                            {
-                                throw new Exception("LocationDAO: VerifyExistance: Location name is not unique");
-                            }
-                            else if (e2.X != e3.X && e2.Y != e3.Y)
-                            {
-                                throw new Exception("LocationDAO: VerifyExistance: Location coordinates are not unique");
-                            }
-                            return e2;
+                            throw new Exception("LocationDAO: VerifyExistance: Location name is not unique");
                         }
-                        catch (Exception e)
-                        {
-                            _logger.LogDebug(e.Message + "\n" +
-                                "Name: " + location.Name + "\n" +
-                                "X: " + location.X + "\n" +
-                                "Y: " + location.Y + "\n" +
-                                "e1 Id: " + location.Id + "\n" +
-                                "e2 Id: " + e2.Id + "\n" +
-                                "e3 Id: " + e3.Id + "\n");
-                            return e2;
-                        }
+                        return e2;
                     }
                     return e2;
                 }
@@ -108,9 +106,8 @@ public class LocationDAO : ILocationDAO
                 "Id: " + location.Id + "\n");
             return e1;
         }
-
-
     }
+
 
     public List<Location> GetLocations()
     {
@@ -156,7 +153,7 @@ public class LocationDAO : ILocationDAO
         }
         Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {updateFields}");
 
-        return UpdateLocationBasedOnFields(id, updateFields);
+        return UpdateLocationBasedOnFields(id, location.Id, updateFields);
     }
 
     public DeleteResult DeleteLocation(string id)
@@ -179,8 +176,15 @@ public class LocationDAO : ILocationDAO
     }
 
     // RemoveFields is default to an empty list
-    private UpdateResult UpdateLocationBasedOnFields(string id, BsonDocument updateFields, List<string>? removeFields = default)
+    private UpdateResult UpdateLocationBasedOnFields(string id, string id_new, BsonDocument updateFields, List<string>? removeFields = default)
     {
+        // Find the document with the matching id
+        var doc = _collection.Find(l => l.Id == id).FirstOrDefault();
+        if (doc == null)
+        {
+            throw new Exception("No document with matching id found");
+        }
+
         Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - updateFields: {updateFields}");
         var updateDoc = new BsonDocument();
 
@@ -200,19 +204,12 @@ public class LocationDAO : ILocationDAO
         var result = _collection.UpdateOne(l => l.Id == id, update);
         Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - result: {result}");
 
+        // Create a new BSONDocument and add all the key-value pairs from the original, except for the _id field
+        Location copy = _collection.FindOneAndDelete(l => l.Id == id);
+        copy.Id = id_new;
+        _collection.InsertOne(copy);
+
         return result;
 
-        /*
-        await UpdateFields(
-           ObjectId.Parse("5f9d9d5e5c5b0a84b8c2cee2"),
-       new BsonDocument { { "field1", "new value" }, { "field2", "new value" } }
-        );
-        */
-
     }
-
-
-
-
-
 }
