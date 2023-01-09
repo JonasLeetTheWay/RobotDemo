@@ -37,18 +37,18 @@ public class LocationDAO : ILocationDAO
         if (existing == null)
         {
             _collection.InsertOne(location);
-            Console.WriteLine("existing==null, _collection.InsertOne id" + location.Id);
+            Console.WriteLine("existing==null, _collection.InsertOne id: " + location.Id);
             return location.Id;
         }
         else
         {
             UpdateLocation(existing.Id, location);
-            Console.WriteLine("existing!=null, existing data id" + existing.Id);
+            Console.WriteLine("existing!=null, existing data id: " + existing.Id);
             return existing.Id;
         }
     }
 
-   
+
 
     public Location? VerifyExistance(Location location)
     {
@@ -203,11 +203,6 @@ public class LocationDAO : ILocationDAO
         var update = Builders<Location>.Update.Combine(updateDoc);
         var result = _collection.UpdateOne(l => l.Id == id, update);
         Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - result: {result}");
-
-        // Create a new BSONDocument and add all the key-value pairs from the original, except for the _id field
-        Location copy = _collection.FindOneAndDelete(l => l.Id == id);
-        copy.Id = id_new;
-        _collection.InsertOne(copy);
 
         return result;
 
