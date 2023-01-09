@@ -21,5 +21,11 @@ public class Location
     public double? Y { get; set; }
 
     [BsonElement("robots")]
-    public List<string>? RobotIds { get; set; }
+    public List<string>? RobotIds { get; set; } = new();
+
+    // override ToString()
+    public override string ToString()
+    {
+        return $"Id: {Id}, Name: {Name}, X: {X}, Y: {Y}, RobotIds: {string.Join(", ", RobotIds)}";
+    }
 }
