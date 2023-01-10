@@ -1,6 +1,7 @@
 using Backend.Infrastructure;
 using Backend.Services;
 using Backend.Settings;
+using Common.Logger;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -11,9 +12,11 @@ services.AddGrpc();
 services.Configure<MongoDBSettings>(
     builder.Configuration.GetSection("MongoDB"));
 
-services.AddScoped<LocationDAO>();
-services.AddScoped<RobotDAO>();
-services.AddScoped<ILogger,Logger<LocationDAO>>();
+services.AddScoped<ILocationDAO, LocationDAO>();
+services.AddScoped<ILogger, Logger<LocationDAO>>();
+services.AddScoped<ILogger, Logger<LocationService>>();
+
+//services.AddScoped<RobotDAO>();
 
 
 builder.Services.AddCors(o => o.AddPolicy("AllowAll", builder =>

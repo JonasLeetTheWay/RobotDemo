@@ -21,7 +21,7 @@ service LocationProto {
 
   rpc GetLocationByCoordinate(Coordinate) returns (LocationResponse);
 
-  rpc GetLocationByRobotId(RobotId) returns (LocationResponse);
+  rpc GetLocationByRobotId(RobotId) returns (LocationsResponse);
 
   rpc GetLocations(google.protobuf.Empty) returns (LocationsResponse);
 
