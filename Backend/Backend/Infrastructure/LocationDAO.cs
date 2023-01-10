@@ -1,22 +1,26 @@
-﻿using Common.Domain;
+﻿using Backend.Infrastructure;
 using Backend.Settings;
+using Common.Domain;
+using Common.Protos;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.Json;
-
-namespace Backend.Infrastructure;
 
 public class LocationDAO : ILocationDAO
 {
     private readonly IMongoCollection<Location> _collection;
     private readonly IMongoClient _client;
     private readonly IMongoDatabase _database;
-    private readonly ILogger _logger;
+    private readonly ILogger? _logger;
 
-    public LocationDAO(IOptions<MongoDBSettings> settings, ILogger logger)
+    private string GetMethodData(MethodBase methodBase)
+    {
+        return $"{methodBase?.DeclaringType.Name} {methodBase?.Name}->\n\t\t\t\t\t\t\t\t";
+    }
+
+    public LocationDAO(IOptions<MongoDBSettings> settings, ILogger? logger)
     {
 
         _client = new MongoClient(settings.Value.ConnectionString);
@@ -29,21 +33,23 @@ public class LocationDAO : ILocationDAO
     {
         _collection.DeleteMany(Builders<Location>.Filter.Empty);
     }
+
+    
     // id, name, x, y
     public string InsertLocation(Location location)
     {
-        Console.WriteLine("parameter id" + location.Id);
+        _logger.LogInformation("parameter id: " + location.Id);
         var existing = VerifyExistance(location);
         if (existing == null)
         {
             _collection.InsertOne(location);
-            Console.WriteLine("existing==null, _collection.InsertOne id: " + location.Id);
+            _logger.LogInformation("existing==null, _collection.InsertOne id: " + location.Id);
             return location.Id;
         }
         else
         {
             UpdateLocation(existing.Id, location);
-            Console.WriteLine("existing!=null, existing data id: " + existing.Id);
+            _logger.LogInformation("existing!=null, existing data id: " + existing.Id);
             return existing.Id;
         }
     }
@@ -99,11 +105,12 @@ public class LocationDAO : ILocationDAO
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e.Message + "\n" +
-                "Name: " + location.Name + "\n" +
-                "X: " + location.X + "\n" +
-                "Y: " + location.Y + "\n" +
-                "Id: " + location.Id + "\n");
+            _logger.LogInformation("Catched error:\n"+
+                e.Message +
+                "Name: " + location.Name +
+                "X: " + location.X +
+                "Y: " + location.Y +
+                "Id: " + location.Id);
             return e1;
         }
     }
@@ -129,12 +136,10 @@ public class LocationDAO : ILocationDAO
         // then update the document with UpdateLocationBasedOnFields function
 
         var updateFields = new BsonDocument();
-        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - ", location);
-        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name}, x,y expanded - ", location.Id, location.X, location.Y, location.Name, location.RobotIds);
+        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+location);
 
         if (location.X != double.MinValue && location.Y != double.MinValue)
         {
-            Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name}, x,y not uninitialized - ", location);
             updateFields.Add("x", location.X);
             updateFields.Add("y", location.Y);
         }
@@ -151,28 +156,31 @@ public class LocationDAO : ILocationDAO
             // so be careful to Add RobotIds when using this function
             updateFields.Add("robots", new BsonArray(location.RobotIds));
         }
-        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - {updateFields}");
+        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+$"updated fields: {updateFields}");
 
         return UpdateLocationBasedOnFields(id, location.Id, updateFields);
     }
 
-    public DeleteResult DeleteLocation(string id)
+    public DeleteResult DeleteLocation(string locationId)
     {
-        return _collection.DeleteOne(new BsonDocument("Id", id));
+        var filter = Builders<Location>.Filter.Eq("Id", locationId);
+        return _collection.DeleteOne(filter);
     }
 
     public UpdateResult AddRobotToLocation(string locationId, string robotId)
     {
-        return _collection.UpdateOne(
-            new BsonDocument("Id", locationId),
-        new BsonDocument("$addToSet", new BsonDocument("robots", robotId)));
+        var filter = Builders<Location>.Filter.Eq("Id", locationId);
+        var update = Builders<Location>.Update.AddToSet("RobotIds", robotId);
+        return _collection.UpdateOne(filter, update);
+
     }
 
     public UpdateResult RemoveRobotFromLocation(string locationId, string robotId)
     {
-        return _collection.UpdateOne(
-        new BsonDocument("Id", locationId),
-            new BsonDocument("$pull", new BsonDocument("robots", robotId)));
+        var filter = Builders<Location>.Filter.Eq("Id", locationId);
+        var update = Builders<Location>.Update.Pull("RobotIds", robotId);
+
+        return _collection.UpdateOne(filter, update);
     }
 
     // RemoveFields is default to an empty list
@@ -185,7 +193,7 @@ public class LocationDAO : ILocationDAO
             throw new Exception("No document with matching id found");
         }
 
-        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - updateFields: {updateFields}");
+        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+$"updateFields: {updateFields}");
         var updateDoc = new BsonDocument();
 
         if (updateFields != null)
@@ -198,11 +206,11 @@ public class LocationDAO : ILocationDAO
             removeFields.ForEach(field => unsetFields.Add(field, 1));
             updateDoc.Add("$unset", unsetFields);
         }
-        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - updateDoc: {updateDoc}");
+        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+$"updateDoc: {updateDoc}");
 
         var update = Builders<Location>.Update.Combine(updateDoc);
         var result = _collection.UpdateOne(l => l.Id == id, update);
-        Console.WriteLine($"{MethodBase.GetCurrentMethod().DeclaringType.Name} {MethodBase.GetCurrentMethod().Name} - result: {result}");
+        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+$"result: {result}");
 
         return result;
 
