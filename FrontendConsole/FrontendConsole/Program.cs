@@ -1,54 +1,105 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Grpc.Net.Client;
 using Common.Protos;
+using Common.TestDataGenerator;
 
 using Google.Protobuf.WellKnownTypes;
 using Newtonsoft.Json;
+using MongoDB.Bson;
 
 Console.WriteLine("Hello, World!");
 var channel = GrpcChannel.ForAddress("https://localhost:7081");
 var robotClient = new RobotProto.RobotProtoClient(channel);
 var locationClient = new LocationProto.LocationProtoClient(channel);
 
-/*
-Robot {
-  string id = 1;
-  string name = 2;
-  string type = 3;
-  string current_location = 4;
-  repeated string previous_locations = 5;
-}
- */
-//var r = new Robot
-//{
-//    Name = "Robot1",
-//    Type = "hard",
-//    CurrentLocation = "1",
-//};
+
 while (Console.ReadKey().Key == ConsoleKey.Enter)
 {
-    var l = new AddLocationRequest
-    {
-        Name = "a",
-        X = 10,
-        Y = -10,
-    };
-    var l2 = new UpdateLocationObj();
-    l2.Name = "dd";
-    List<string> fakeIds = new() { "1", "1", "1" };
-    l2.RobotIds.AddRange(fakeIds);
 
-    var res = locationClient.AddLocation(l);
-    Console.WriteLine("added location id: ", res.Id);
-    Console.WriteLine(locationClient.GetLocationById(new Common.Protos.LocationId { Id = res.Id }));
+    var data_all = locationClient.GetLocations(new Empty());
+    string json = JsonConvert.SerializeObject(data_all, Formatting.Indented);
+    Console.WriteLine("all locations before starting: "+json);
+    var td = new LocationProtoTestDataGenerator(); // td : testdata
+    
+    var init = locationClient.AddLocation(td.AddRequest);
+    var locationId = init.Id;
+    var robotId = ObjectId.GenerateNewId().ToString();
+    td.SetLocationUpdateRequestData("ddd", new List<string> { robotId, "b", "c" });
+
+    Console.WriteLine("added location id: "+ locationId);
+    Console.WriteLine("generated robot id: " + robotId);
+
+    td.SetRobotData(robotId);
+    td.SetAddRobotToLocationRequest(locationId,robotId);
+
+    td.SetLocationIdFilter(locationId);
+    td.SetRobotIdFilter(robotId);
 
 
-    locationClient.UpdateLocation(new LocationIdAndUpdate { Id = "63a5c1d2870279a77e77499a", Update = l2 });
-    Console.WriteLine(locationClient.GetLocationById(new Common.Protos.LocationId { Id = res.Id }));
+    Console.WriteLine("\n");
 
-    var response = locationClient.GetLocations(new Empty());
+    var data = locationClient.GetLocationById(td.GetByIdRequest);
+    Console.WriteLine("get location by id: "+ data);
+    Console.WriteLine("\n");
 
-    string json = JsonConvert.SerializeObject(response, Formatting.Indented);
-    Console.WriteLine(json);
+    td.SetLocationUpdateRequest(locationId, td.UpdateRequest);
+    locationClient.UpdateLocation(td.UpdateLocationRequest);
+
+
+    var data2 = locationClient.GetLocationById(td.GetByIdRequest);
+    Console.WriteLine("update location by id: "+ data2);
+    Console.WriteLine("\n");
+
+    locationClient.AddRobotToLocation(td.AddRobotToLocationRequest);
+    var data3 = locationClient.GetLocationByRobotId(td.GetByRobotIdRequest);
+    Console.WriteLine("get location by robot id: "+ data3);
+    Console.WriteLine("\n");
+
+
+    data_all = locationClient.GetLocations(new Empty());
+    json = JsonConvert.SerializeObject(data_all, Formatting.Indented);
+    Console.WriteLine("all locations after updating location with RobotIds data: " + json);
+
+
+
+    // after adding location data & robot data, now GetLocationById shall return Location with both data aspect
+    var data4 = locationClient.GetLocationById(new LocationId { Id = init.Id });
+    Console.WriteLine("after adding location data & robot data,\nget location by id: "+ data4);
+    Console.WriteLine("\n");
+
+    // GetLocationByRobotId shall return the same object
+    var data5 = locationClient.GetLocationByRobotId(td.GetByRobotIdRequest);
+    Console.WriteLine("GetLocationByRobotId shall return the same object: "+ data5);
+    Console.WriteLine("\n");
+
+    td.SetCoordinateFilter(td.AddRequest.X, td.AddRequest.Y);
+    
+    // GetLocationByCoordinate shall return the same object
+    var data6 = locationClient.GetLocationByCoordinate(td.GetByCoordinateRequest);
+    Console.WriteLine("GetLocationByCoordinate shall return the same object: "+ data6);
+    Console.WriteLine("\n");
+
+    // GetLocationByName shall return the same object
+    var data7 = locationClient.GetLocationByName(td.GetByNameRequest);
+    Console.WriteLine("GetLocationByName shall return the same object: " + data7);
+    Console.WriteLine("\n");
+
+    // after removing robot from location, show GetLocationByRobotId
+    locationClient.RemoveRobotFromLocation(new LocationIdAndRobotId { LocationId = init.Id, RobotId = robotId });
+    var datae = locationClient.GetLocationByRobotId(td.GetByRobotIdRequest);
+    Console.WriteLine("get location by robot id after removing robot from location: " + datae);
+    Console.WriteLine("\n");
+
+    data_all = locationClient.GetLocations(new Empty());
+    json = JsonConvert.SerializeObject(data_all, Formatting.Indented);
+    Console.WriteLine("all locations after removing robotId: " +json);
+    Console.WriteLine("\n");
+
+    // delete location
+    locationClient.DeleteLocation(new LocationId { Id = init.Id });
+    data_all = locationClient.GetLocations(new Empty());
+    json = JsonConvert.SerializeObject(data_all, Formatting.Indented);
+    Console.WriteLine("all locations after deleting: " + json);
+
 }
 
