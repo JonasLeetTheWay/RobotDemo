@@ -1,5 +1,5 @@
-﻿using Common.Protos;
-using Common.Domain;
+﻿using Common.Domain;
+using Common.Protos;
 using MongoDB.Bson;
 
 namespace Common.TestDataGenerator;
@@ -115,7 +115,7 @@ public class LocationProtoTestDataGenerator
 
         ExpectedResponse.RobotIds.AddRange(robotIds);
         ExpectedLocation.RobotIds = robotIds.ToList();
-        
+
         ExpectedResponse.Name = locationName;
         ExpectedLocation.Name = locationName;
         GetByNameRequest.Value = locationName;

@@ -1,13 +1,4 @@
-﻿using Common.Domain;
-using Backend.Infrastructure;
-using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
-//using Common.Protos;
-
-using MongoDB.Bson;
-using Common.Protos;
-using Google.Protobuf.Collections;
-using Common.Protos;
+﻿//using Common.Protos;
 
 namespace Backend.Services;
 
@@ -67,12 +58,12 @@ namespace Backend.Services;
 //            response.Name = name ?? "null";
 //            response.CurrentLocation = locationId ?? "null";
 //        }
-            
+
 //        response.PreviousLocationIds.AddRange(locationIds);
 
 
 //        return response;
-        
+
 
 //        response.Name = name;
 //        response.Type = type;
@@ -80,7 +71,7 @@ namespace Backend.Services;
 //        response.CurrentLocation = obj;
 //        return response;
 //    }
-    
+
 
 //    private static UpdateRobotRequest MakeUpdateRobotRequest(string id, LocationObjFull? newLocation = default)
 //    {

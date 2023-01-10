@@ -1,7 +1,6 @@
 using Backend.Infrastructure;
 using Backend.Services;
 using Backend.Settings;
-using Common.Logger;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;

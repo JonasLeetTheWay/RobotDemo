@@ -28,7 +28,7 @@ namespace Tests.Server.UnitTests.Helpers
         private readonly AuthContext _authContext;
         private readonly Dictionary<object, object> _userState;
         private WriteOptions? _writeOptions;
-        
+
         public Metadata? ResponseHeaders { get; private set; }
 
         private TestServerCallContext(Metadata requestHeaders, CancellationToken cancellationToken)

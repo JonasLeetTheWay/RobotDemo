@@ -16,8 +16,8 @@
 
 #endregion
 
-using System.Threading.Channels;
 using Grpc.Core;
+using System.Threading.Channels;
 
 namespace Tests.Server.UnitTests.Helpers
 {
@@ -27,7 +27,7 @@ namespace Tests.Server.UnitTests.Helpers
         private readonly ServerCallContext _serverCallContext;
 
         public T Current { get; private set; } = null!;
-        
+
         public TestAsyncStreamReader(ServerCallContext serverCallContext)
         {
             _channel = System.Threading.Channels.Channel.CreateUnbounded<T>();

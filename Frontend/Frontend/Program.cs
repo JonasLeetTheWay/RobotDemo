@@ -1,8 +1,7 @@
-using Grpc.Net.Client;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using System.Net;
 using Backend.Services;
 using Common.Protos;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;

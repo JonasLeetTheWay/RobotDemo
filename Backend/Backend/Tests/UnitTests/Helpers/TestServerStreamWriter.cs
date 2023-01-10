@@ -16,8 +16,8 @@
 
 #endregion
 
-using System.Threading.Channels;
 using Grpc.Core;
+using System.Threading.Channels;
 
 namespace Tests.Server.UnitTests.Helpers
 {

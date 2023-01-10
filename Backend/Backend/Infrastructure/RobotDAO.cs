@@ -1,5 +1,5 @@
-﻿using Common.Domain;
-using Backend.Settings;
+﻿using Backend.Settings;
+using Common.Domain;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -103,7 +103,7 @@ public class RobotDAO
         return UpdateRobotBasedOnFields(robotId, updateFields);
     }
 
-    
+
     public UpdateResult UpdateRobotStatus(string robotId, string status)
     {
         return _collection.UpdateOne(

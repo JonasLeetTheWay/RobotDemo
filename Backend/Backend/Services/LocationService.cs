@@ -1,16 +1,11 @@
-﻿using Common.Domain;
-using Backend.Infrastructure;
+﻿using Backend.Infrastructure;
+using Common.Domain;
+using Common.LoggerHelper;
 using Common.Protos;
-using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using MongoDB.Bson;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Xml.Linq;
 using MongoDB.Driver;
 using System.Reflection;
-using Common.Logger;
 
 namespace Backend.Services;
 
@@ -19,18 +14,15 @@ public class LocationService : LocationProto.LocationProtoBase
     private readonly ILocationDAO locationDAO;
     private readonly ILogger? _logger;
 
-    private string GetMethodData(MethodBase methodBase)
-    {
-        return $"{methodBase?.DeclaringType.Name} {methodBase?.Name}->\n\t\t\t\t\t\t\t\t";
-    }
-    public LocationService(ILocationDAO locationDAO, ILogger? logger =null)
+
+    public LocationService(ILocationDAO locationDAO, ILogger? logger = null)
     {
         this.locationDAO = locationDAO;
         _logger = logger;
     }
-    
+
     ////////////////////////////////////// inner methods to avoid repetitive work //////////////////////////////////////
-    private LocationResponse MakeLocationResponse(string id, string? name, double? x, double? y, IEnumerable<string>? robotIds=null)
+    private LocationResponse MakeLocationResponse(string id, string? name, double? x, double? y, IEnumerable<string>? robotIds = null)
     {
 
         x ??= double.MinValue;
@@ -67,11 +59,11 @@ public class LocationService : LocationProto.LocationProtoBase
             robotIdsToAdd.UnionWith(robotIds);
             response.RobotIds.AddRange(robotIdsToAdd);
         }
-        
+
         return response;
     }
 
-   
+
 
     private static UpdateLocationObj MakeUpdateLocationObj(IEnumerable<string> robotIds, string? name = default)
     {
@@ -125,18 +117,18 @@ public class LocationService : LocationProto.LocationProtoBase
     // Implement the GetLocationById method
     public override Task<LocationResponse> GetLocationById(LocationId locationId, ServerCallContext context)
     {
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + "server, getlocationbyid: " + locationId.Id);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "server, getlocationbyid: " + locationId.Id);
         // Validate the request
         if (string.IsNullOrEmpty(locationId.Id))
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request"));
         }
-        
+
         // Find the location in the database
         var locs = locationDAO.GetLocations();
         foreach (var loc in locs)
         {
-            _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+ "each loc: "+ loc);
+            _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "each loc: " + loc);
         }
 
         var location = locationDAO.FindLocations(l => l.Id == locationId.Id).SingleOrDefault(); // unique id for every object
@@ -145,8 +137,8 @@ public class LocationService : LocationProto.LocationProtoBase
             throw new RpcException(new Status(StatusCode.NotFound, "Location not found"));
         }
 
-        var response = MakeLocationResponse(location.Id, location.Name, location.X,location.Y, location.RobotIds);
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + response);
+        var response = MakeLocationResponse(location.Id, location.Name, location.X, location.Y, location.RobotIds);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + response);
 
         return Task.FromResult(response);
     }
@@ -172,13 +164,13 @@ public class LocationService : LocationProto.LocationProtoBase
         foreach (var loc in location)
         {
             var response = MakeLocationResponse(loc.Id, loc.Name, loc.X, loc.Y, loc.RobotIds);
-            _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + response);
+            _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + response);
             result.Locations.Add(response);
         }
 
         return Task.FromResult(result);
     }
-    
+
     // Implement the GetLocationByName method
     public override Task<LocationResponse> GetLocationByName(Name request, ServerCallContext context)
     {
@@ -194,7 +186,7 @@ public class LocationService : LocationProto.LocationProtoBase
             throw new RpcException(new Status(StatusCode.NotFound, "Location not found"));
         }
         var response = MakeLocationResponse(location.Id, location.Name, location.X, location.Y, location.RobotIds);
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+ response);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + response);
 
         return Task.FromResult(response);
 
@@ -215,7 +207,7 @@ public class LocationService : LocationProto.LocationProtoBase
             throw new RpcException(new Status(StatusCode.NotFound, "Location not found"));
         }
         var response = MakeLocationResponse(location.Id, location.Name, location.X, location.Y, location.RobotIds);
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+ response);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + response);
 
         return Task.FromResult(response);
 
@@ -235,9 +227,9 @@ public class LocationService : LocationProto.LocationProtoBase
 
         foreach (var loc in locations)
         {
-            buffer.Add(MakeLocationResponse(loc.Id, loc.Name, loc.X, loc.Y,loc.RobotIds));
+            buffer.Add(MakeLocationResponse(loc.Id, loc.Name, loc.X, loc.Y, loc.RobotIds));
         }
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+"buffer: "+ string.Join(",",buffer));
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "buffer: " + string.Join(",", buffer));
 
         response.Locations.AddRange(buffer);
         //await responseStream.WriteAsync(response);
@@ -256,13 +248,13 @@ public class LocationService : LocationProto.LocationProtoBase
 
         // intepret each attribute of request.Update (a UpdateLocationObj)
         var existing = locationDAO.VerifyExistance(new Location { Id = request.Id });
-        var update = MakeLocation(existing?.X, existing?.Y,request.Update.Name, request.Update.RobotIds);
-        
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + "updateLocationData: " + update + "\t existing Id:", existing?.Id);
+        var update = MakeLocation(existing?.X, existing?.Y, request.Update.Name, request.Update.RobotIds);
+
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "updateLocationData: " + update + "\t existing Id:", existing?.Id);
 
         // Update the location in the database
         var innerResult = locationDAO.UpdateLocation(request.Id, update);
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
 
 
         return Task.FromResult(new Empty());
@@ -279,7 +271,7 @@ public class LocationService : LocationProto.LocationProtoBase
 
         // Delete the location from the database
         var innerResult = locationDAO.DeleteLocation(request.Id);
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
 
         return Task.FromResult(new Empty());
     }
@@ -298,7 +290,7 @@ public class LocationService : LocationProto.LocationProtoBase
     //    var update = MakeUpdateLocationObj(new List<string>() { robotId }, locationName);
     //    var updateRequest = new LocationIdAndUpdate { Id = locationId, Update = update };
     //    var innerResult = UpdateLocation(updateRequest, context);
-    //    _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
+    //    _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
 
     //    return Task.FromResult(new Empty());
     //}
@@ -318,7 +310,7 @@ public class LocationService : LocationProto.LocationProtoBase
     //    var update = MakeUpdateLocationObj(new List<string>() { robotId }, locationName);
     //    var updateRequest = new LocationIdAndUpdate { Id = locationId, Update = update };
     //    var innerResult = UpdateLocation(updateRequest, context);
-    //    _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
+    //    _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
 
     //    return Task.FromResult(new Empty());
     //}
@@ -337,7 +329,7 @@ public class LocationService : LocationProto.LocationProtoBase
 
         // Add the robot to the location in the database
         var innerResult = locationDAO.AddRobotToLocation(locationId, robotId);
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
 
         return Task.FromResult(new Empty());
     }
@@ -355,10 +347,10 @@ public class LocationService : LocationProto.LocationProtoBase
 
         // Remove the robot from the location in the database
         var innerResult = locationDAO.RemoveRobotFromLocation(locationId, robotId);
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + "innerResult: " + innerResult);
 
         return Task.FromResult(new Empty());
     }
 
-    
+
 }
