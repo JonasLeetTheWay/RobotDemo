@@ -8,7 +8,9 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit.Abstractions;
 
-namespace Backend.Tests.UnitTests;
+namespace Backend.UnitTests.LocationServiceTests;
+
+
 
 public static class TestDataGenerator
 {
@@ -24,6 +26,22 @@ public static class TestDataGenerator
     }
 }
 
+public class LocationComparer : IEqualityComparer<Location>
+{
+    public bool Equals(Location x, Location y)
+    {
+        if (x == null && y == null)
+            return true;
+        if (x == null || y == null)
+            return false;
+        return x.Id == y.Id && x.Name == y.Name && x.X == y.X && x.Y == y.Y && x.RobotIds.OrderBy(r => r).SequenceEqual(y.RobotIds.OrderBy(r => r));
+    }
+
+    public int GetHashCode(Location obj)
+    {
+        return obj.Id.GetHashCode();
+    }
+}
 
 public class LocationDAOTests
 {
@@ -115,21 +133,15 @@ public class LocationDAOTests
         var location = TestDataGenerator.GenerateLocation("Test Location", 1.0, 2.0);
         var existingLocation = TestDataGenerator.GenerateLocation(location.Name, 3.0, 4.0);
         dao.InsertLocation(existingLocation);
-        _logger.WriteLine(existingLocation.Id);
-        _logger.WriteLine(existingLocation.X.ToString());
-        _logger.WriteLine(existingLocation.Y.ToString());
-        _logger.WriteLine(existingLocation.Name);
+        _logger.WriteLine(existingLocation.ToString());
         bool exceptionThrown = false;
 
         // Act
         try
         {
             var res = dao.VerifyExistance(location);
-                _logger.WriteLine("hi");
-                _logger.WriteLine(res.Id);
-                _logger.WriteLine(res.X.ToString());
-                _logger.WriteLine(res.Y.ToString());
-                _logger.WriteLine(res.Name);
+            _logger.WriteLine(res.ToString());
+
         }
         catch (Exception)
         {
@@ -139,9 +151,6 @@ public class LocationDAOTests
         // Assert
         Assert.True(exceptionThrown);
     }
-    
-    
-    
     
     ////////////////////// GetLocations ///////////////////////
      
@@ -158,11 +167,7 @@ public class LocationDAOTests
         var locations = dao.GetLocations();
         foreach (var res in locations)
         {
-            _logger.WriteLine("hi");
-            _logger.WriteLine(res.Id);
-            _logger.WriteLine(res.X.ToString());
-            _logger.WriteLine(res.Y.ToString());
-            _logger.WriteLine(res.Name);
+            _logger.WriteLine(res.ToString());
         }
         // Assert
         Assert.Contains(location1, locations, new LocationComparer());
@@ -184,11 +189,7 @@ public class LocationDAOTests
         var result = dao.FindLocations(filter);
         foreach (var res in result)
         {
-            _logger.WriteLine("hi");
-            _logger.WriteLine(res.Id);
-            _logger.WriteLine(res.X.ToString());
-            _logger.WriteLine(res.Y.ToString());
-            _logger.WriteLine(res.Name);
+            _logger.WriteLine(res.ToString());
         }
         // Assert
         Assert.Single(result);
@@ -221,11 +222,7 @@ public class LocationDAOTests
         var result = dao.FindLocations(filter);
         foreach (var res in result)
         {
-            _logger.WriteLine("hi");
-            _logger.WriteLine(res.Id);
-            _logger.WriteLine(res.X.ToString());
-            _logger.WriteLine(res.Y.ToString());
-            _logger.WriteLine(res.Name);
+            _logger.WriteLine(res.ToString());
         }
 
 
@@ -236,22 +233,7 @@ public class LocationDAOTests
         Assert.Contains(location3, result, new LocationComparer());
     }
 
-    public class LocationComparer : IEqualityComparer<Location>
-    {
-        public bool Equals(Location x, Location y)
-        {
-            if (x == null && y == null)
-                return true;
-            if (x == null || y == null)
-                return false;
-            return x.Id == y.Id && x.Name == y.Name && x.X == y.X && x.Y == y.Y;
-        }
-
-        public int GetHashCode(Location obj)
-        {
-            return obj.Id.GetHashCode();
-        }
-    }
+   
 
     [Fact]
     public void FindLocations_ShouldReturnLocations_WhenFilterMatchesMultipleLocations_2()
@@ -262,6 +244,8 @@ public class LocationDAOTests
         var location1 = TestDataGenerator.GenerateLocation("Test Location 1", 1.0, 2.0);
         var location2 = TestDataGenerator.GenerateLocation("Test Location 2", 1.0, 2.0);
         var location3 = TestDataGenerator.GenerateLocation("Test Location 3", 3.0, 4.0);
+        var expectedLocation = location2;
+        expectedLocation.Id = location1.Id;
         dao.InsertLocation(location1);
         _logger.WriteLine(location1.Id);
         
@@ -271,17 +255,13 @@ public class LocationDAOTests
         dao.InsertLocation(location3);
         _logger.WriteLine(location3.Id);
         
-        var expectedLocations = new List<Location> { location2 };
+        var expectedLocations = new List<Location> { expectedLocation };
         var filter = Builders<Location>.Filter.Eq("x", 1.0) & Builders<Location>.Filter.Eq("y", 2.0);
         // Act
         var result = dao.FindLocations(filter);
         foreach (var res in result)
         {
-            _logger.WriteLine("hi");
-            _logger.WriteLine(res.Id);
-            _logger.WriteLine(res.X.ToString());
-            _logger.WriteLine(res.Y.ToString());
-            _logger.WriteLine(res.Name);
+            _logger.WriteLine(res.ToString());
         }
 
         // Assert
@@ -323,7 +303,7 @@ public class LocationDAOTests
         dao.UpdateLocation(location.Id, updatedLocation);
 
         // Assert
-        var result = dao.GetLocations().FirstOrDefault(l => l.Id == location.Id);
+        var result = dao.GetLocations().SingleOrDefault(l => l.Id == location.Id);
         Assert.Equal(updatedLocation.Name, result.Name);
         Assert.Equal(updatedLocation.X, result.X);
         Assert.Equal(updatedLocation.Y, result.Y);
@@ -360,6 +340,62 @@ public class LocationDAOTests
         Assert.DoesNotContain(location, locations);
     }
 
-    
+    ////////////////////// AddRobotToLocation ///////////////////////
+    [Fact]
+    public void AddRobotToLocation_ShouldAddRobotToLocation_ForMatchingLocationAndRobotId()
+    {
+        // Arrange
+        var location = TestDataGenerator.GenerateLocation("Test Location", 1.0, 2.0);
+        var robotId = ObjectId.GenerateNewId().ToString();
+        _logger.WriteLine(robotId);
+
+        dao.InsertLocation(location);
+
+        var expectedLocation = new List<Location>();
+        var locationCopy = location;
+        locationCopy.RobotIds.Add(robotId);
+        expectedLocation.Add(locationCopy);
+
+        // Act
+        var result = dao.AddRobotToLocation(location.Id, robotId);
+
+        // Assert
+        var actualLocation = dao.FindLocations(l => l.Id == location.Id);
+        _logger.WriteLine(actualLocation.First().ToString());
+        _logger.WriteLine(expectedLocation.First().ToString());
+        Assert.Equal(expectedLocation, actualLocation, new LocationComparer());
+        Assert.Contains(robotId, actualLocation.First().RobotIds);
+        Assert.Equal(1, result.ModifiedCount);
+    }
+
+    ////////////////////// RemoveRobotFromLocation ///////////////////////
+
+    [Fact]
+    public void RemoveRobotFromLocation_ShouldRemoveRobotFromLocation_ForMatchingLocationAndRobotId()
+    {
+        // Arrange
+        var location = TestDataGenerator.GenerateLocation("Test Location", 1.0, 2.0);
+        var robotId = ObjectId.GenerateNewId().ToString();
+        _logger.WriteLine(robotId);
+        
+        location.RobotIds.Add(robotId);
+        dao.InsertLocation(location);
+        
+        var expectedLocation = new List<Location>();
+        var locationCopy = location;
+        locationCopy.RobotIds.Remove(robotId);
+        expectedLocation.Add(locationCopy);
+        
+        // Act
+        var result = dao.RemoveRobotFromLocation(location.Id, robotId);
+
+        // Assert
+        var actualLocation = dao.FindLocations(l => l.Id == location.Id);
+        _logger.WriteLine(actualLocation.First().ToString());
+        _logger.WriteLine(expectedLocation.First().ToString());
+        Assert.Equal(expectedLocation, actualLocation, new LocationComparer());
+        Assert.DoesNotContain(robotId, actualLocation.First().RobotIds);
+        Assert.Equal(1, result.ModifiedCount);
+    }
 
 }
