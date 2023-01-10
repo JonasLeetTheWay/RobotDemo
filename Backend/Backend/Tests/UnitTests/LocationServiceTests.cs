@@ -1,7 +1,6 @@
-﻿using Backend.Infrastructure;
-using Backend.Services;
+﻿using Backend.Services;
 using Backend.Settings;
-using Common.Domain;
+using Common.LoggerHelper;
 using Common.Protos;
 using Common.TestDataGenerator;
 using Google.Protobuf.WellKnownTypes;
@@ -10,32 +9,25 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
-using NuGet.Frameworks;
-using System.Linq.Expressions;
 using Tests.Server.UnitTests.Helpers;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
-using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
 
 namespace Backend.UnitTests.LocationServiceTests;
 
 
 public class LocationServiceTests
 {
-    
+
     private readonly LocationDAO dao;
     private readonly Mock<ILogger<LocationService>> mockLoggerLocationService = new Mock<ILogger<LocationService>>();
     private readonly Mock<ILogger<LocationDAO>> mockLoggerLocationDAO = new Mock<ILogger<LocationDAO>>();
-    
+
     private readonly LocationService service;
     private readonly ITestOutputHelper _logger;
     private readonly LocationProtoTestDataGenerator td;
 
-    private string GetString_LocationResponse(LocationResponse locationResponse)
-    {
-        return "id: " + locationResponse.Id + ", name:" + locationResponse.Name + ", x:" + locationResponse.X + ", y:" + locationResponse.Y + ", robotIds:" + string.Join(",", locationResponse.RobotIds);
-    }
+
 
 
     public LocationServiceTests(ITestOutputHelper logger)
@@ -49,14 +41,14 @@ public class LocationServiceTests
             DatabaseName = "testDB",
             CollectionName_Locations = "testLocations"
         });
-        
+
         dao = new LocationDAO(settings, mockLoggerLocationDAO.Object);
         dao.ClearCollection(); // Clear test collection before each test
 
         service = new LocationService(dao, mockLoggerLocationService.Object);
-        
+
         td = new LocationProtoTestDataGenerator();
-        
+
         td.SetCoordinateFilter(td.AddRequest.X, td.AddRequest.Y);
     }
 
@@ -70,17 +62,17 @@ public class LocationServiceTests
         // Act
         var inserted = await service.AddLocation(location, TestServerCallContext.Create());
         var locationId = inserted.Id;
-        
+
         td.SetExpectedResponseId(locationId);
         var expected = td.ExpectedResponse;
-        
+
 
         // Assert
         var result = await service.GetLocationById(new LocationId { Id = locationId }, TestServerCallContext.Create());
 
         _logger.WriteLine("inserted Id: " + locationId);
-        _logger.WriteLine("retrieved Location with GetLocationById: " + GetString_LocationResponse(result));
-        
+        _logger.WriteLine("retrieved Location with GetLocationById: " + LoggerHelper.GetString_LocationResponse(result));
+
         Assert.Equal(expected.Id, result.Id);
         Assert.Equal(expected.Name, result.Name);
         Assert.Equal(expected.X, result.X);
@@ -92,7 +84,7 @@ public class LocationServiceTests
     {
         // Arrange
         var location = td.AddRequest;
-        
+
         var inserted = await service.AddLocation(location, TestServerCallContext.Create());
         var locationId = inserted.Id;
 
@@ -103,7 +95,7 @@ public class LocationServiceTests
         var result = await service.GetLocationById(new LocationId { Id = locationId }, TestServerCallContext.Create());
 
         // Assert
-        
+
         Assert.Equal(expected.Id, result.Id);
         Assert.Equal(expected.Name, result.Name);
         Assert.Equal(expected.X, result.X);
@@ -121,7 +113,7 @@ public class LocationServiceTests
 
         td.SetExpectedResponseId(locationId);
         var expected = td.ExpectedResponse;
-        
+
         // Act
         var result = await service.GetLocationByName(td.GetByNameRequest, TestServerCallContext.Create());
 
@@ -149,7 +141,7 @@ public class LocationServiceTests
         var result = await service.GetLocationByCoordinate(td.GetByCoordinateRequest, TestServerCallContext.Create());
 
         // Assert
-        
+
         Assert.Equal(expected.Id, result.Id);
         Assert.Equal(expected.Name, result.Name);
         Assert.Equal(expected.X, result.X);
@@ -165,7 +157,7 @@ public class LocationServiceTests
         var locationId = inserted.Id;
 
         td.SetExpectedResponseId(locationId);
-        
+
         var robotId = ObjectId.GenerateNewId().ToString();
         var robotId2 = ObjectId.GenerateNewId().ToString();
         var robotId3 = ObjectId.GenerateNewId().ToString();
@@ -174,11 +166,11 @@ public class LocationServiceTests
         td.SetAddRobotToLocationRequest(locationId, robotId);
 
         td.SetLocationUpdateRequestData(location.Name, new List<string> { robotId, robotId2, robotId3 });
-        
+
         //td.SetLocationUpdateRequest(locationId, td.UpdateRequest);
         //await service.UpdateLocation(td.UpdateLocationRequest, TestServerCallContext.Create());
-        
-        await service.AddRobotToLocation(new LocationIdAndRobotId{ RobotId = robotId, LocationId = locationId}, TestServerCallContext.Create());
+
+        await service.AddRobotToLocation(new LocationIdAndRobotId { RobotId = robotId, LocationId = locationId }, TestServerCallContext.Create());
 
         td.SetAddRobotToLocationRequest(locationId, robotId2);
         await service.AddRobotToLocation(new LocationIdAndRobotId { RobotId = robotId2, LocationId = locationId }, TestServerCallContext.Create());
@@ -188,8 +180,8 @@ public class LocationServiceTests
 
 
         // Act
-        var result = (await service.GetLocationByRobotId(new RobotId { Id=robotId}, TestServerCallContext.Create())).Locations.First();
-        _logger.WriteLine(GetString_LocationResponse(result));
+        var result = (await service.GetLocationByRobotId(new RobotId { Id = robotId }, TestServerCallContext.Create())).Locations.First();
+        _logger.WriteLine(LoggerHelper.GetString_LocationResponse(result));
 
         var expected = td.ExpectedResponse;
 
@@ -214,19 +206,19 @@ public class LocationServiceTests
         td.SetExpectedResponseId(locationId1);
         var expected1 = td.ExpectedResponse;
 
-        
-        
+
+
         td.SetLocationData("Test Location 2", 3.0, 4.0);
         var location2 = td.AddRequest;
 
         var inserted2 = await service.AddLocation(location2, TestServerCallContext.Create());
         var locationId2 = inserted2.Id;
-        
+
         td.SetExpectedResponseId(locationId2);
         var expected2 = td.ExpectedResponse;
 
-        _logger.WriteLine(GetString_LocationResponse(expected1));
-        _logger.WriteLine(GetString_LocationResponse(expected2));
+        _logger.WriteLine(LoggerHelper.GetString_LocationResponse(expected1));
+        _logger.WriteLine(LoggerHelper.GetString_LocationResponse(expected2));
         _logger.WriteLine("\n----------------------\n");
 
         // Act
@@ -239,8 +231,8 @@ public class LocationServiceTests
             Assert.Equal(expected[i].Name, result[i].Name);
             Assert.Equal(expected[i].X, result[i].X);
             Assert.Equal(expected[i].Y, result[i].Y);
-            _logger.WriteLine(GetString_LocationResponse(expected[i]));
-            _logger.WriteLine(GetString_LocationResponse(result[i]));
+            _logger.WriteLine(LoggerHelper.GetString_LocationResponse(expected[i]));
+            _logger.WriteLine(LoggerHelper.GetString_LocationResponse(result[i]));
         }
     }
     [Fact]
@@ -256,16 +248,16 @@ public class LocationServiceTests
 
         td.SetLocationUpdateRequestData("Test Location 2", new List<string> { "Robot 1", "Robot 2" });
         td.SetLocationUpdateRequest(locationId, td.UpdateRequest);
-        
+
         // Act
         await service.UpdateLocation(td.UpdateLocationRequest, TestServerCallContext.Create());
 
         // Assert
-        var result = await service.GetLocationById(new LocationId { Id=locationId}, TestServerCallContext.Create());
+        var result = await service.GetLocationById(new LocationId { Id = locationId }, TestServerCallContext.Create());
 
         var expected = td.ExpectedResponse;
-        _logger.WriteLine(GetString_LocationResponse(expected));
-        _logger.WriteLine(GetString_LocationResponse(result));
+        _logger.WriteLine(LoggerHelper.GetString_LocationResponse(expected));
+        _logger.WriteLine(LoggerHelper.GetString_LocationResponse(result));
 
         Assert.Equal(expected.Id, result.Id);
         Assert.Equal(expected.Name, result.Name);
@@ -288,8 +280,8 @@ public class LocationServiceTests
         td.SetAddRobotToLocationRequest(locationId, robotId);
 
         // Act
-        await service.AddRobotToLocation(new LocationIdAndRobotId { RobotId = robotId, LocationId = locationId },TestServerCallContext.Create());
-        var result = await service.GetLocationById(new LocationId { Id = locationId },TestServerCallContext.Create());
+        await service.AddRobotToLocation(new LocationIdAndRobotId { RobotId = robotId, LocationId = locationId }, TestServerCallContext.Create());
+        var result = await service.GetLocationById(new LocationId { Id = locationId }, TestServerCallContext.Create());
         var expected = td.ExpectedResponse;
 
         // Assert
@@ -312,7 +304,7 @@ public class LocationServiceTests
         // Act
         await service.DeleteLocation(new LocationId { Id = locationId }, TestServerCallContext.Create());
         _logger.WriteLine("deleted");
-        _logger.WriteLine("locationId: "+locationId);
+        _logger.WriteLine("locationId: " + locationId);
 
         var locResponses = (await service.GetLocations(new Empty(), TestServerCallContext.Create())).Locations;
         _logger.WriteLine("locResponses count: " + locResponses.Count);
@@ -338,7 +330,7 @@ public class LocationServiceTests
             Assert.Equal("Location not found", e.Status.Detail);
 
         }
-        
+
     }
 
 
@@ -377,8 +369,8 @@ public class LocationServiceTests
         Assert.Contains(robotId2, result.RobotIds);
 
 
-        _logger.WriteLine(GetString_LocationResponse(expected));
-        _logger.WriteLine(GetString_LocationResponse(result));
+        _logger.WriteLine(LoggerHelper.GetString_LocationResponse(expected));
+        _logger.WriteLine(LoggerHelper.GetString_LocationResponse(result));
     }
 
 

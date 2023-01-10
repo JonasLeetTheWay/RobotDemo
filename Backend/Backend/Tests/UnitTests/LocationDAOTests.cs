@@ -1,11 +1,10 @@
-﻿using Common.Domain;
-using Backend.Settings;
+﻿using Backend.Settings;
+using Common.Domain;
 using Microsoft.Extensions.Options;
-using Moq;
-using Xunit;
-using Backend.Infrastructure;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Moq;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Backend.UnitTests.LocationServiceTests;
@@ -63,9 +62,9 @@ public class LocationDAOTests
         dao.ClearCollection(); // Clear test collection before each test
     }
 
-    
+
     ////////////////////// InsertLocation ///////////////////////
-    
+
     [Fact]
     public void InsertLocation_ShouldInsertNewLocation_WhenLocationDoesNotExist()
     {
@@ -79,11 +78,11 @@ public class LocationDAOTests
         // Assert
         Assert.Equal(expectedId, result);
     }
-    
-    
-    
+
+
+
     ////////////////////// VerifyExistance ///////////////////////
-    
+
     [Fact]
     public void VerifyExistance_ShouldReturnNull_WhenLocationDoesNotExist()
     {
@@ -123,7 +122,7 @@ public class LocationDAOTests
         // Assert
         Assert.Equal(expectedLocation.X, result.X);
         Assert.Equal(expectedLocation.Y, result.Y);
-        
+
     }
 
     [Fact]
@@ -151,9 +150,9 @@ public class LocationDAOTests
         // Assert
         Assert.True(exceptionThrown);
     }
-    
+
     ////////////////////// GetLocations ///////////////////////
-     
+
     [Fact]
     public void GetLocations_ShouldReturnAllLocations_WhenCalled()
     {
@@ -181,7 +180,7 @@ public class LocationDAOTests
         // Arrange
         var location = TestDataGenerator.GenerateLocation("Test Location", 1.0, 2.0);
         _logger.WriteLine(location.Id);
-        
+
         dao.InsertLocation(location);
         var filter = Builders<Location>.Filter.Eq("name", location.Name);
 
@@ -206,7 +205,7 @@ public class LocationDAOTests
         var location1 = TestDataGenerator.GenerateLocation("Test Location 1", 1.0, 2.0);
         dao.InsertLocation(location1);
         _logger.WriteLine(location1.Id);
-        
+
         var location2 = TestDataGenerator.GenerateLocation("Test Location 2", 3.0, 4.0);
         dao.InsertLocation(location2);
         _logger.WriteLine(location2.Id);
@@ -214,7 +213,7 @@ public class LocationDAOTests
         var location3 = TestDataGenerator.GenerateLocation("Test Location 3", 5.0, 6.0);
         dao.InsertLocation(location3);
         _logger.WriteLine(location3.Id);
-        
+
 
         var filter = Builders<Location>.Filter.Gte("x", 1.0) & Builders<Location>.Filter.Lte("x", 5.0);
 
@@ -233,7 +232,7 @@ public class LocationDAOTests
         Assert.Contains(location3, result, new LocationComparer());
     }
 
-   
+
 
     [Fact]
     public void FindLocations_ShouldReturnLocations_WhenFilterMatchesMultipleLocations_2()
@@ -248,13 +247,13 @@ public class LocationDAOTests
         expectedLocation.Id = location1.Id;
         dao.InsertLocation(location1);
         _logger.WriteLine(location1.Id);
-        
+
         dao.InsertLocation(location2);
         _logger.WriteLine(location2.Id);
-        
+
         dao.InsertLocation(location3);
         _logger.WriteLine(location3.Id);
-        
+
         var expectedLocations = new List<Location> { expectedLocation };
         var filter = Builders<Location>.Filter.Eq("x", 1.0) & Builders<Location>.Filter.Eq("y", 2.0);
         // Act
@@ -286,10 +285,10 @@ public class LocationDAOTests
         Assert.Equal(expectedLocations, result);
     }
 
-    
+
 
     ////////////////////// UpdateLocation ///////////////////////
-    
+
     [Fact]
     public void UpdateLocation_ShouldUpdateLocation_WhenLocationExists()
     {
@@ -319,12 +318,12 @@ public class LocationDAOTests
         // Act and Assert
         Assert.Throws<Exception>(() => dao.UpdateLocation(invalidId, location));
     }
-    
 
-    
+
+
     ////////////////////// DeleteLocation ///////////////////////
-    
-    
+
+
     [Fact]
     public void DeleteLocation_ShouldDeleteLocation_WhenLocationExists()
     {
@@ -377,15 +376,15 @@ public class LocationDAOTests
         var location = TestDataGenerator.GenerateLocation("Test Location", 1.0, 2.0);
         var robotId = ObjectId.GenerateNewId().ToString();
         _logger.WriteLine(robotId);
-        
+
         location.RobotIds.Add(robotId);
         dao.InsertLocation(location);
-        
+
         var expectedLocation = new List<Location>();
         var locationCopy = location;
         locationCopy.RobotIds.Remove(robotId);
         expectedLocation.Add(locationCopy);
-        
+
         // Act
         var result = dao.RemoveRobotFromLocation(location.Id, robotId);
 

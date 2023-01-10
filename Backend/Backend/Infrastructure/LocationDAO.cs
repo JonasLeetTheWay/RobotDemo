@@ -1,7 +1,7 @@
 ﻿using Backend.Infrastructure;
 using Backend.Settings;
 using Common.Domain;
-using Common.Protos;
+using Common.LoggerHelper;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -14,11 +14,6 @@ public class LocationDAO : ILocationDAO
     private readonly IMongoClient _client;
     private readonly IMongoDatabase _database;
     private readonly ILogger? _logger;
-
-    private string GetMethodData(MethodBase methodBase)
-    {
-        return $"{methodBase?.DeclaringType.Name} {methodBase?.Name}->\n\t\t\t\t\t\t\t\t";
-    }
 
     public LocationDAO(IOptions<MongoDBSettings> settings, ILogger? logger)
     {
@@ -34,7 +29,7 @@ public class LocationDAO : ILocationDAO
         _collection.DeleteMany(Builders<Location>.Filter.Empty);
     }
 
-    
+
     // id, name, x, y
     public string InsertLocation(Location location)
     {
@@ -105,7 +100,7 @@ public class LocationDAO : ILocationDAO
         }
         catch (Exception e)
         {
-            _logger.LogInformation("Catched error:\n"+
+            _logger.LogInformation("Catched error:\n" +
                 e.Message +
                 "Name: " + location.Name +
                 "X: " + location.X +
@@ -136,7 +131,7 @@ public class LocationDAO : ILocationDAO
         // then update the document with UpdateLocationBasedOnFields function
 
         var updateFields = new BsonDocument();
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+location);
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + location);
 
         if (location.X != double.MinValue && location.Y != double.MinValue)
         {
@@ -156,7 +151,7 @@ public class LocationDAO : ILocationDAO
             // so be careful to Add RobotIds when using this function
             updateFields.Add("robots", new BsonArray(location.RobotIds));
         }
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+$"updated fields: {updateFields}");
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + $"updated fields: {updateFields}");
 
         return UpdateLocationBasedOnFields(id, location.Id, updateFields);
     }
@@ -193,7 +188,7 @@ public class LocationDAO : ILocationDAO
             throw new Exception("No document with matching id found");
         }
 
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+$"updateFields: {updateFields}");
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + $"updateFields: {updateFields}");
         var updateDoc = new BsonDocument();
 
         if (updateFields != null)
@@ -206,11 +201,11 @@ public class LocationDAO : ILocationDAO
             removeFields.ForEach(field => unsetFields.Add(field, 1));
             updateDoc.Add("$unset", unsetFields);
         }
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+$"updateDoc: {updateDoc}");
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + $"updateDoc: {updateDoc}");
 
         var update = Builders<Location>.Update.Combine(updateDoc);
         var result = _collection.UpdateOne(l => l.Id == id, update);
-        _logger.LogInformation(GetMethodData(MethodBase.GetCurrentMethod())+$"result: {result}");
+        _logger.LogInformation(LoggerHelper.GetMethodData(MethodBase.GetCurrentMethod()) + $"result: {result}");
 
         return result;
 
