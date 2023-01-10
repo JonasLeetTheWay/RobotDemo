@@ -20,7 +20,8 @@ This project is a system that allows users to track and manage a fleet of autono
 
 
 ## Incoming:
-- Testing (mock testing, doubles testing, microservices contract testing)
+- Testing (unit testing)
+- CQRS
 
 ## Technology:
 - ASP.NET Core
